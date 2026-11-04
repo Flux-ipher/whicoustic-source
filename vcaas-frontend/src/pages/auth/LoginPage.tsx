@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { useAuth } from '../../context/AuthContext';
 import { Lock, ArrowRight, ShieldCheck } from 'lucide-react';
+import { PageTransition } from '../../components/ui/PageTransition';
 
 export const LoginPage: React.FC = () => {
   const { login, loginWithOAuth } = useAuth();
@@ -23,7 +24,7 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="bg-white p-8 sm:p-10 rounded-card-lg border border-outline-subtle shadow-elevated space-y-6">
+    <PageTransition className="bg-white p-8 sm:p-10 rounded-card-lg border border-outline-subtle shadow-elevated space-y-6">
       <div className="space-y-2">
         <h2 className="font-recoletta text-3xl font-bold text-on-surface">
           Console Login
@@ -102,7 +103,7 @@ export const LoginPage: React.FC = () => {
           Multi-factor cryptographic authentication enforced.
         </p>
       </div>
-    </div>
+    </PageTransition>
   );
 };
 

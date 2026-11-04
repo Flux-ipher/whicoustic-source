@@ -16,7 +16,15 @@ import {
   WifiOff,
   Sparkles,
   RefreshCw,
+  HelpCircle,
+  Play,
+  RotateCcw,
 } from 'lucide-react';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { MicBlockedIllustration, ConnectionLostIllustration } from '../../components/ui/Illustrations';
+import { MicrophoneTroubleshooterModal } from '../../components/ui/MicrophoneTroubleshooterModal';
+import { PageTransition } from '../../components/ui/PageTransition';
+import { Button } from '../../components/ui/Button';
 
 /* ─── Types ──────────────────────────────────────────────────── */
 export interface LayerResult {
@@ -310,6 +318,8 @@ export const DemoPage: React.FC = () => {
   const [history, setHistory] = useState<Verdict[]>([]);
   const [layersOpen, setLayersOpen] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [micDenied, setMicDenied] = useState(false);
+  const [showMicModal, setShowMicModal] = useState(false);
   const [volumeLevel, setVolumeLevel] = useState<number>(0);
   const [simulationMode, setSimulationMode] = useState<'HUMAN' | 'AI_ATTACK'>('HUMAN');
 
@@ -484,7 +494,8 @@ export const DemoPage: React.FC = () => {
       setListening(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      setError(`Microphone access error: ${msg}. Please allow microphone permissions in your browser.`);
+      setError(msg);
+      setMicDenied(true);
       teardown();
       setListening(false);
       setWsState('idle');
@@ -510,6 +521,15 @@ export const DemoPage: React.FC = () => {
     }, 1500);
   }, [simulationMode]);
 
+  /* Start simulated acoustic stream directly (bypasses mic if blocked or unavailable) */
+  const startSimulatedStream = useCallback(() => {
+    setError(null);
+    setMicDenied(false);
+    setWsState('simulated');
+    setListening(true);
+    startLocalAnalysisLoop();
+  }, [startLocalAnalysisLoop]);
+
   // Keep simulator updated if mode changes while listening
   useEffect(() => {
     if (listening && wsState === 'simulated') {
@@ -528,6 +548,7 @@ export const DemoPage: React.FC = () => {
     setLatest(null);
     setHistory([]);
     setError(null);
+    setMicDenied(false);
     tickCountRef.current = 0;
   }, [stop]);
 
@@ -540,7 +561,8 @@ export const DemoPage: React.FC = () => {
       {/* Page styles scoped to ld- prefix */}
       <style>{ldStyles}</style>
 
-      <div className="ld-root">
+      <PageTransition>
+        <div className="ld-root">
         {/* ── Header ─────────────────────────────── */}
         <header className="ld-header">
           <motion.div
@@ -657,17 +679,42 @@ export const DemoPage: React.FC = () => {
               </button>
             )}
 
-            {/* Error */}
+            {/* Rich Illustrated Error State with What to Do Next */}
             <AnimatePresence>
               {error && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="ld-error"
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  className="p-5 bg-red-50/60 border border-red-200/80 rounded-card my-2 text-left"
                 >
-                  <ShieldAlert size={14} className="shrink-0 mt-0.5" />
-                  <span>{error}</span>
+                  <ErrorState
+                    illustration={<MicBlockedIllustration size={130} />}
+                    title="Microphone Access Blocked or Not Detected"
+                    description="The acoustic engine requires microphone input to evaluate glottal waveform, ultrasonic steganography, and vocal fold dynamics in real time."
+                    solutionSteps={[
+                      'Click the lock or camera icon on the left side of your browser URL bar.',
+                      'Change Microphone permission from "Block" to "Allow".',
+                      'Verify your microphone is plugged in and unmuted in your system audio settings.',
+                      'Or, start the Simulated Acoustic Stream below to test the 6-layer defense system immediately.',
+                    ]}
+                    retryLabel="Retry Microphone"
+                    onRetry={start}
+                    secondaryLabel="How to Unblock in Browser"
+                    onSecondaryAction={() => setShowMicModal(true)}
+                    technicalError={error}
+                  />
+
+                  <div className="pt-3 border-t border-red-200/60 mt-3 flex justify-center">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={startSimulatedStream}
+                      icon={<Play className="w-3.5 h-3.5" />}
+                    >
+                      Run Simulated Voice Stream Instead
+                    </Button>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -840,6 +887,13 @@ export const DemoPage: React.FC = () => {
           </div>
         </motion.section>
       </div>
+      </PageTransition>
+
+      <MicrophoneTroubleshooterModal
+        isOpen={showMicModal}
+        onClose={() => setShowMicModal(false)}
+        onRetry={start}
+      />
     </>
   );
 };

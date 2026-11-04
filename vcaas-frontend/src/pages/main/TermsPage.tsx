@@ -1,10 +1,12 @@
 import React from 'react';
 import { Card } from '../../components/ui/Card';
 import { ShieldCheck, Lock, FileText } from 'lucide-react';
+import { PageTransition } from '../../components/ui/PageTransition';
+import { LegalComplianceIllustration } from '../../components/ui/Illustrations';
 
 export const TermsPage: React.FC = () => {
   return (
-    <div className="max-w-container mx-auto px-6 py-12 space-y-10">
+    <PageTransition className="max-w-container mx-auto px-6 py-12 space-y-10">
       <div className="max-w-3xl space-y-3">
         <h1 className="font-recoletta text-4xl sm:text-5xl font-bold text-on-surface">
           Terms of Service & Licensing Protocol
@@ -15,27 +17,35 @@ export const TermsPage: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        {/* Table of Contents */}
-        <div className="lg:col-span-4 hidden lg:block">
-          <div className="sticky top-28 space-y-2 p-5 bg-white rounded-card border border-outline-subtle text-xs font-berthold">
+        {/* Table of Contents & Compliance Sidebar */}
+        <div className="lg:col-span-4 hidden lg:block sticky top-24 self-start space-y-6">
+          <div className="space-y-2 p-5 bg-white rounded-card border border-outline-subtle text-xs font-berthold shadow-sm">
             <span className="text-secondary uppercase tracking-wider font-bold block mb-2">
               Protocol Sections
             </span>
-            <a href="#section-1" className="block text-on-surface hover:text-primary-container py-1">
+            <a href="#section-1" className="block text-on-surface hover:text-primary-container py-1 transition-colors">
               1. Sovereign Voice Ownership
             </a>
-            <a href="#section-2" className="block text-on-surface hover:text-primary-container py-1">
+            <a href="#section-2" className="block text-on-surface hover:text-primary-container py-1 transition-colors">
               2. Cryptographic Watermark Mandate
             </a>
-            <a href="#section-3" className="block text-on-surface hover:text-primary-container py-1">
+            <a href="#section-3" className="block text-on-surface hover:text-primary-container py-1 transition-colors">
               3. Smart Contract Royalty Escrow
             </a>
-            <a href="#section-4" className="block text-on-surface hover:text-primary-container py-1">
+            <a href="#section-4" className="block text-on-surface hover:text-primary-container py-1 transition-colors">
               4. Commercial Exclusions & Defamation
             </a>
-            <a href="#section-5" className="block text-on-surface hover:text-primary-container py-1">
+            <a href="#section-5" className="block text-on-surface hover:text-primary-container py-1 transition-colors">
               5. Dispute Resolution & Forensics
             </a>
+          </div>
+
+          <div className="p-5 bg-surface-container/60 rounded-card border border-outline-subtle text-center space-y-2">
+            <LegalComplianceIllustration size={130} className="mx-auto" />
+            <h4 className="font-recoletta text-sm font-bold text-on-surface">SAG-AFTRA & NIST Standard</h4>
+            <p className="text-[11px] font-berthold text-slate-600">
+              Enforcing sovereign actor ownership and tamper-proof steganographic seals across all synthesis pipelines.
+            </p>
           </div>
         </div>
 
@@ -77,10 +87,19 @@ export const TermsPage: React.FC = () => {
                 Voice personas may never be used for deceptive election interference, unconsented adult content, harassment, or defamatory broadcasts. Violating entities face permanent network banning and referral to federal copyright and identity theft enforcement authorities.
               </p>
             </section>
+
+            <section id="section-5" className="space-y-3 pt-6 border-t border-outline-subtle">
+              <h3 className="font-recoletta text-2xl font-bold text-on-surface">
+                5. Dispute Resolution & Forensics
+              </h3>
+              <p>
+                In the event of an alleged unauthorized clone or watermark infringement, Whicoustic provides certified cryptographic audit trails to SAG-AFTRA arbiters, WIPO panels, and federal courts. Ultrasonic spectrum logs and SHA-256 provenance hashes serve as immutable legal evidence of identity attribution.
+              </p>
+            </section>
           </Card>
         </div>
       </div>
-    </div>
+    </PageTransition>
   );
 };
 

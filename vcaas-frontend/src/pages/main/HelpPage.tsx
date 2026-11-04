@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from '../../components/ui/Card';
-import { Search, ChevronDown, ChevronUp, HelpCircle, ShieldAlert, Cpu, DollarSign } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, HelpCircle, ShieldAlert, Cpu, DollarSign, RotateCcw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { EmptySearchIllustration } from '../../components/ui/Illustrations';
+import { PageTransition } from '../../components/ui/PageTransition';
 
 interface FAQ {
   q: string;
@@ -55,7 +59,7 @@ export const HelpPage: React.FC = () => {
   );
 
   return (
-    <div className="max-w-container mx-auto px-6 py-12 space-y-12">
+    <PageTransition className="max-w-container mx-auto px-6 py-12 space-y-12">
       {/* Header */}
       <div className="max-w-3xl mx-auto text-center space-y-4">
         <h1 className="font-recoletta text-4xl sm:text-5xl font-bold text-on-surface">
@@ -109,41 +113,65 @@ export const HelpPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Accordion FAQ List */}
-      <div className="max-w-3xl mx-auto space-y-4">
-        {filteredFaqs.map((faq, idx) => {
-          const isOpen = openIndex === idx;
+      {/* Accordion FAQ List or Empty State */}
+      {filteredFaqs.length === 0 ? (
+        <EmptyState
+          illustration={<EmptySearchIllustration size={180} />}
+          title="No documentation matches your inquiry"
+          description={`We couldn't find any questions matching "${search}". Our engineering and rights counsel can answer your specific questions.`}
+          actionLabel="Reset Search Query"
+          onAction={() => setSearch('')}
+          actionIcon={<RotateCcw className="w-4 h-4" />}
+          secondaryLabel="Speak with an Engineer"
+          secondaryHref="/contact"
+        />
+      ) : (
+        <div className="max-w-3xl mx-auto space-y-4">
+          {filteredFaqs.map((faq, idx) => {
+            const isOpen = openIndex === idx;
 
-          return (
-            <Card
-              key={idx}
-              elevation="flat"
-              padding="md"
-              className="cursor-pointer transition-colors hover:border-primary-container/40"
-              onClick={() => setOpenIndex(isOpen ? null : idx)}
-            >
-              <div className="flex items-center justify-between gap-4">
-                <span className="font-recoletta text-base sm:text-lg font-bold text-on-surface">
-                  {faq.q}
-                </span>
-                <span className="text-secondary shrink-0">
-                  {isOpen ? <ChevronUp className="w-4 h-4 text-primary-container" /> : <ChevronDown className="w-4 h-4" />}
-                </span>
-              </div>
-              {isOpen && (
-                <div className="pt-3 mt-3 border-t border-outline-subtle">
-                  <p className="font-berthold text-sm text-secondary leading-relaxed">
-                    {faq.a}
-                  </p>
-                  <span className="inline-block mt-3 text-[11px] font-code text-primary-container">
-                    Category: {faq.category}
+            return (
+              <Card
+                key={idx}
+                elevation="flat"
+                padding="md"
+                className="cursor-pointer transition-colors hover:border-primary-container/40"
+                onClick={() => setOpenIndex(isOpen ? null : idx)}
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <span className="font-recoletta text-base sm:text-lg font-bold text-on-surface">
+                    {faq.q}
+                  </span>
+                  <span className="text-secondary shrink-0">
+                    {isOpen ? <ChevronUp className="w-4 h-4 text-primary-container" /> : <ChevronDown className="w-4 h-4" />}
                   </span>
                 </div>
-              )}
-            </Card>
-          );
-        })}
-      </div>
+
+                <AnimatePresence>
+                  {isOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.25, ease: 'easeOut' }}
+                      className="overflow-hidden"
+                    >
+                      <div className="pt-3 mt-3 border-t border-outline-subtle">
+                        <p className="font-berthold text-sm text-slate-700 leading-relaxed">
+                          {faq.a}
+                        </p>
+                        <span className="inline-block mt-3 text-[11px] font-code text-primary-container">
+                          Category: {faq.category}
+                        </span>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       {/* Escalation CTA */}
       <div className="max-w-xl mx-auto text-center p-8 rounded-card bg-surface-container border border-outline-subtle space-y-3">
@@ -161,7 +189,7 @@ export const HelpPage: React.FC = () => {
           </Link>
         </div>
       </div>
-    </div>
+    </PageTransition>
   );
 };
 

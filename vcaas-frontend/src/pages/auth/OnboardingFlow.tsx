@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { StepIndicator, Step } from '../../components/ui/StepIndicator';
 import { WaveformVisualizer } from '../../components/ui/WaveformVisualizer';
+import { MicrophoneTroubleshooterModal } from '../../components/ui/MicrophoneTroubleshooterModal';
+import { PageTransition } from '../../components/ui/PageTransition';
+import { TalentVoiceIllustration, BiometricShieldIllustration } from '../../components/ui/Illustrations';
 import {
   Mic,
   ShieldCheck,
@@ -16,6 +20,7 @@ import {
   Layers,
   Sliders,
   Award,
+  HelpCircle,
 } from 'lucide-react';
 
 export const OnboardingFlow: React.FC = () => {
@@ -23,6 +28,7 @@ export const OnboardingFlow: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingProgress, setRecordingProgress] = useState(0);
+  const [showTroubleshooter, setShowTroubleshooter] = useState(false);
 
   const steps: Step[] = [
     { id: 1, title: 'Voice Persona & Role' },
@@ -48,7 +54,7 @@ export const OnboardingFlow: React.FC = () => {
   };
 
   return (
-    <div className="space-y-10">
+    <PageTransition className="space-y-10">
       {/* Stepper Bar */}
       <StepIndicator
         steps={steps}
@@ -60,6 +66,7 @@ export const OnboardingFlow: React.FC = () => {
       {currentStep === 1 && (
         <Card elevation="elevated" padding="lg" className="space-y-8 animate-fadeIn">
           <div className="text-center space-y-2 max-w-lg mx-auto">
+            <TalentVoiceIllustration size={110} className="mx-auto pb-1" />
             <h2 className="font-recoletta text-3xl font-bold text-on-surface">
               Welcome, {user?.name || 'Artist'}. Define Your Persona.
             </h2>
@@ -187,15 +194,26 @@ export const OnboardingFlow: React.FC = () => {
                 </p>
               )}
 
-              <Button
-                variant={isRecording ? 'dark' : 'primary'}
-                size="md"
-                onClick={handleStartCalibration}
-                disabled={isRecording}
-                icon={<Mic className="w-4 h-4" />}
-              >
-                {isRecording ? 'Listening...' : 'Begin Voice Calibration'}
-              </Button>
+              <div className="flex flex-col items-center gap-2">
+                <Button
+                  variant={isRecording ? 'dark' : 'primary'}
+                  size="md"
+                  onClick={handleStartCalibration}
+                  disabled={isRecording}
+                  icon={<Mic className="w-4 h-4" />}
+                >
+                  {isRecording ? 'Listening...' : 'Begin Voice Calibration'}
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowTroubleshooter(true)}
+                  className="inline-flex items-center gap-1.5 text-xs font-berthold text-slate-500 hover:text-slate-800 transition-colors pt-1"
+                >
+                  <HelpCircle className="w-3.5 h-3.5" />
+                  <span>Microphone not working? Open troubleshooting guide</span>
+                </button>
+              </div>
             </div>
 
             <div className="pt-4 flex items-center justify-between">
@@ -220,6 +238,7 @@ export const OnboardingFlow: React.FC = () => {
       {currentStep === 3 && (
         <Card elevation="elevated" padding="lg" className="space-y-8 animate-fadeIn">
           <div className="text-center space-y-2 max-w-lg mx-auto">
+            <BiometricShieldIllustration size={100} className="mx-auto pb-1" />
             <span className="text-xs font-berthold font-semibold tracking-wider text-primary-container uppercase">
               Step 3 of 3: Final Activation
             </span>
@@ -298,7 +317,13 @@ export const OnboardingFlow: React.FC = () => {
           </div>
         </Card>
       )}
-    </div>
+
+      <MicrophoneTroubleshooterModal
+        isOpen={showTroubleshooter}
+        onClose={() => setShowTroubleshooter(false)}
+        onRetry={handleStartCalibration}
+      />
+    </PageTransition>
   );
 };
 

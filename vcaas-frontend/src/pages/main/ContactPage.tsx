@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
+import { PageTransition } from '../../components/ui/PageTransition';
+import { StudioConsultationIllustration } from '../../components/ui/Illustrations';
 import { Mail, Phone, MapPin, Send, CheckCircle2, ShieldCheck } from 'lucide-react';
 
 export const ContactPage: React.FC = () => {
@@ -20,7 +22,7 @@ export const ContactPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-container mx-auto px-6 py-12 space-y-12">
+    <PageTransition className="max-w-container mx-auto px-6 py-12 space-y-12">
       <div className="max-w-2xl mx-auto text-center space-y-3">
         <h1 className="font-recoletta text-4xl sm:text-5xl font-bold text-on-surface">
           Schedule a Studio Consultation
@@ -34,6 +36,9 @@ export const ContactPage: React.FC = () => {
         {/* Left: Contact Info & Office */}
         <div className="lg:col-span-5 space-y-6">
           <Card elevation="elevated" padding="lg" className="space-y-6">
+            <div className="text-center pb-2">
+              <StudioConsultationIllustration size={140} className="mx-auto" />
+            </div>
             <h3 className="font-recoletta text-2xl font-bold text-on-surface">
               Acoustic Protocol Headquarters
             </h3>
@@ -165,7 +170,7 @@ export const ContactPage: React.FC = () => {
           </Card>
         </div>
       </div>
-    </div>
+    </PageTransition>
   );
 };
 

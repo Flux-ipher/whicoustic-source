@@ -17,6 +17,8 @@ import { HelpPage } from './pages/main/HelpPage';
 import { ContactPage } from './pages/main/ContactPage';
 import { TermsPage } from './pages/main/TermsPage';
 import { PrivacyPage } from './pages/main/PrivacyPage';
+import { NotFoundPage } from './pages/main/NotFoundPage';
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
 // Auth & Onboarding Pages
 import { SignupPage } from './pages/auth/SignupPage';
@@ -80,20 +82,22 @@ const AppRoutes: React.FC = () => {
         <Route path="/onboarding" element={<OnboardingFlow />} />
       </Route>
 
-      {/* Wildcard */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* Wildcard 404 */}
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 };
 
 export default function App() {
   return (
-    <DomainProvider>
-      <AuthProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </AuthProvider>
-    </DomainProvider>
+    <ErrorBoundary>
+      <DomainProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </AuthProvider>
+      </DomainProvider>
+    </ErrorBoundary>
   );
 }

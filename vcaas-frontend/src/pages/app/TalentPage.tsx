@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { WaveformVisualizer } from '../../components/ui/WaveformVisualizer';
+import { PageTransition } from '../../components/ui/PageTransition';
+import { TalentVoiceIllustration } from '../../components/ui/Illustrations';
 import { useAuth } from '../../context/AuthContext';
 import { ShieldCheck, Play, Pause, Edit3, Plus, Globe, Sparkles } from 'lucide-react';
 
@@ -34,7 +36,7 @@ export const TalentPage: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-8 pb-10">
+    <PageTransition className="space-y-8 pb-10">
       {/* Profile Overview Card */}
       <Card elevation="elevated" padding="lg">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
@@ -66,9 +68,12 @@ export const TalentPage: React.FC = () => {
             </div>
           </div>
 
-          <Button variant="secondary" size="sm" icon={<Edit3 className="w-3.5 h-3.5" />}>
-            Edit Public Profile
-          </Button>
+          <div className="flex items-center gap-4">
+            <TalentVoiceIllustration size={110} className="shrink-0 hidden md:inline-flex" />
+            <Button variant="secondary" size="sm" icon={<Edit3 className="w-3.5 h-3.5" />}>
+              Edit Public Profile
+            </Button>
+          </div>
         </div>
       </Card>
 
@@ -131,7 +136,7 @@ export const TalentPage: React.FC = () => {
           })}
         </div>
       </div>
-    </div>
+    </PageTransition>
   );
 };
 

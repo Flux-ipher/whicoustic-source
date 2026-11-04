@@ -1,6 +1,8 @@
 import React from 'react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { PageTransition } from '../../components/ui/PageTransition';
+import { RoyaltyEscrowIllustration } from '../../components/ui/Illustrations';
 import { PieChart, ResponsiveContainer, Pie, Cell, Tooltip } from 'recharts';
 import { ShieldCheck, FileText, ArrowUpRight, Coins } from 'lucide-react';
 
@@ -13,7 +15,7 @@ export const RoyaltiesPage: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-8 pb-10">
+    <PageTransition className="space-y-8 pb-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-outline-subtle">
         <div className="space-y-1">
           <h2 className="font-recoletta text-3xl font-bold text-on-surface">
@@ -23,6 +25,7 @@ export const RoyaltiesPage: React.FC = () => {
             Continuous verification of active licenses, downstream syndicated broadcasts, and territorial splits.
           </p>
         </div>
+        <RoyaltyEscrowIllustration size={110} className="shrink-0 hidden sm:inline-flex" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -120,7 +123,7 @@ export const RoyaltiesPage: React.FC = () => {
           </Card>
         </div>
       </div>
-    </div>
+    </PageTransition>
   );
 };
 

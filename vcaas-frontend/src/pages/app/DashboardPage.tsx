@@ -1,8 +1,10 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { StatCard } from '../../components/ui/StatCard';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { WaveformVisualizer } from '../../components/ui/WaveformVisualizer';
+import { PageTransition } from '../../components/ui/PageTransition';
 import { mockDashboardMetrics, mockRecentActivity, mockThroughputData } from '../../data/mock/dashboard';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 import {
@@ -19,9 +21,20 @@ import { Link } from 'react-router-dom';
 
 export const DashboardPage: React.FC = () => {
   return (
-    <div className="space-y-8 pb-10">
+    <PageTransition className="space-y-8 pb-10">
       {/* 1. KPI Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={{
+          hidden: { opacity: 0 },
+          visible: {
+            opacity: 1,
+            transition: { staggerChildren: 0.08 },
+          },
+        }}
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
+      >
         <StatCard
           label="Active Voice Clones"
           value={mockDashboardMetrics[0].value}
@@ -54,7 +67,7 @@ export const DashboardPage: React.FC = () => {
           caption={mockDashboardMetrics[3].caption}
           icon={<Activity className="w-4 h-4" />}
         />
-      </div>
+      </motion.div>
 
       {/* 2. Real-Time Telemetry & Throughput Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -213,7 +226,7 @@ export const DashboardPage: React.FC = () => {
           </Card>
         </div>
       </div>
-    </div>
+    </PageTransition>
   );
 };
 

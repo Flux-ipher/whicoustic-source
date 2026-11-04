@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { WaveformVisualizer } from '../../components/ui/WaveformVisualizer';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { EmptyVaultIllustration, MicBlockedIllustration } from '../../components/ui/Illustrations';
+import { PageTransition } from '../../components/ui/PageTransition';
 import { mockCloneJobs, CloneJob } from '../../data/mock/studio';
-import { UploadCloud, Mic2, Play, Sliders, CheckCircle2, Sparkles, Zap, Trash2 } from 'lucide-react';
+import { UploadCloud, Mic2, Play, Sliders, CheckCircle2, Zap, Trash2, AlertTriangle, Plus, RotateCcw } from 'lucide-react';
 
 export const StudioPage: React.FC = () => {
   const [modelName, setModelName] = useState('Elena Rostova — Narrative Edition');
@@ -12,14 +17,16 @@ export const StudioPage: React.FC = () => {
   const [watermarkLevel, setWatermarkLevel] = useState('Ultrasonic L3 (Forensic)');
   const [isProcessing, setIsProcessing] = useState(false);
   const [jobs, setJobs] = useState<CloneJob[]>(mockCloneJobs);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const handleTrainNewModel = () => {
     setIsProcessing(true);
+    setUploadError(null);
     setTimeout(() => {
       setIsProcessing(false);
       const newJob: CloneJob = {
         id: `clone_${Date.now()}`,
-        name: modelName,
+        name: modelName || 'Untitled Biometric Model',
         sourceAudioDurationSec: 300,
         qualityScore: 99.1,
         status: 'READY',
@@ -31,8 +38,12 @@ export const StudioPage: React.FC = () => {
     }, 1500);
   };
 
+  const handleDeleteJob = (id: string) => {
+    setJobs(jobs.filter((j) => j.id !== id));
+  };
+
   return (
-    <div className="space-y-8 pb-10">
+    <PageTransition className="space-y-8 pb-10">
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-outline-subtle">
         <div className="space-y-1">
@@ -159,57 +170,115 @@ export const StudioPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Trained Models Table */}
-      <Card elevation="elevated" padding="lg" className="space-y-4">
-        <h3 className="font-recoletta text-xl font-bold text-on-surface">
-          Deployed Neural Model Checkpoints
-        </h3>
+      {/* Optional Upload Error Box with Solution Steps */}
+      <AnimatePresence>
+        {uploadError && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="p-6 bg-red-50/70 border border-red-200 rounded-card"
+          >
+            <ErrorState
+              illustration={<MicBlockedIllustration size={130} />}
+              title="Acoustic Quality Baseline Failure"
+              description={uploadError}
+              solutionSteps={[
+                'Ensure audio was recorded with an external cardioid microphone (avoid built-in laptop mics).',
+                'Verify sampling rate is at least 44.1 kHz, 16-bit or 24-bit lossless PCM WAV.',
+                'Ensure background noise level is under -45 dBFS without acoustic reverberation.',
+              ]}
+              retryLabel="Dismiss & Re-select Audio"
+              onRetry={() => setUploadError(null)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs font-berthold">
-            <thead className="bg-surface-container text-secondary uppercase tracking-wider font-semibold">
-              <tr>
-                <th className="py-3 px-4 rounded-l-pill">Model Designation</th>
-                <th className="py-3 px-4">Training Audio</th>
-                <th className="py-3 px-4">Quality Score</th>
-                <th className="py-3 px-4">Watermark SHA-256</th>
-                <th className="py-3 px-4">Inference Latency</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 rounded-r-pill text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-outline-subtle">
-              {jobs.map((job) => (
-                <tr key={job.id} className="hover:bg-surface-container-low transition-colors">
-                  <td className="py-3.5 px-4 font-bold text-on-surface flex items-center gap-2">
-                    <Mic2 className="w-3.5 h-3.5 text-primary-container" />
-                    <span>{job.name}</span>
-                  </td>
-                  <td className="py-3.5 px-4 text-secondary">{job.sourceAudioDurationSec} secs WAV</td>
-                  <td className="py-3.5 px-4 font-code font-semibold text-emerald-700">
-                    {job.qualityScore}%
-                  </td>
-                  <td className="py-3.5 px-4 font-code text-secondary">
-                    {job.watermarkSha256.substring(0, 12)}...
-                  </td>
-                  <td className="py-3.5 px-4 font-code text-secondary">{job.latencyMs} ms</td>
-                  <td className="py-3.5 px-4">
-                    <span className={`text-xs font-medium ${job.status === 'READY' ? 'text-emerald-700' : 'text-amber-700'}`}>
-                      {job.status}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
-                    <button className="text-secondary hover:text-error transition-colors p-1">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Trained Models Table or Empty State */}
+      <Card elevation="elevated" padding="lg" className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-recoletta text-xl font-bold text-on-surface">
+            Deployed Neural Model Checkpoints
+          </h3>
+          {jobs.length > 0 && (
+            <span className="text-xs font-code text-slate-500">
+              {jobs.length} active checkpoint{jobs.length === 1 ? '' : 's'}
+            </span>
+          )}
         </div>
+
+        {jobs.length === 0 ? (
+          <EmptyState
+            illustration={<EmptyVaultIllustration size={180} />}
+            title="No Biometric Checkpoints Deployed"
+            description="You have not synthesized any neural voice models yet. Upload 5 minutes of reference studio speech to train your first watermarked persona."
+            actionLabel="Train Initial Voice Model"
+            onAction={handleTrainNewModel}
+            actionIcon={<Plus className="w-4 h-4" />}
+            secondaryLabel="Reset Mock Checkpoints"
+            onSecondaryAction={() => setJobs(mockCloneJobs)}
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs font-berthold">
+              <thead className="bg-surface-container text-secondary uppercase tracking-wider font-semibold">
+                <tr>
+                  <th className="py-3 px-4 rounded-l-pill">Model Designation</th>
+                  <th className="py-3 px-4">Training Audio</th>
+                  <th className="py-3 px-4">Quality Score</th>
+                  <th className="py-3 px-4">Watermark SHA-256</th>
+                  <th className="py-3 px-4">Inference Latency</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 rounded-r-pill text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-subtle">
+                <AnimatePresence>
+                  {jobs.map((job) => (
+                    <motion.tr
+                      key={job.id}
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.25 }}
+                      className="hover:bg-surface-container-low transition-colors"
+                    >
+                      <td className="py-3.5 px-4 font-bold text-on-surface flex items-center gap-2">
+                        <Mic2 className="w-3.5 h-3.5 text-primary-container" />
+                        <span>{job.name}</span>
+                      </td>
+                      <td className="py-3.5 px-4 text-secondary">{job.sourceAudioDurationSec} secs WAV</td>
+                      <td className="py-3.5 px-4 font-code font-semibold text-emerald-700">
+                        {job.qualityScore}%
+                      </td>
+                      <td className="py-3.5 px-4 font-code text-secondary">
+                        {job.watermarkSha256.substring(0, 12)}...
+                      </td>
+                      <td className="py-3.5 px-4 font-code text-secondary">{job.latencyMs} ms</td>
+                      <td className="py-3.5 px-4">
+                        <span className={`text-xs font-medium ${job.status === 'READY' ? 'text-emerald-700' : 'text-amber-700'}`}>
+                          {job.status}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <button
+                          onClick={() => handleDeleteJob(job.id)}
+                          className="text-secondary hover:text-error transition-colors p-1"
+                          title="Delete model checkpoint"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
-    </div>
+    </PageTransition>
   );
 };
 

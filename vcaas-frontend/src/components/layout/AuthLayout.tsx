@@ -2,7 +2,8 @@ import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { BrandLogo } from '../ui/BrandLogo';
 import { WaveformVisualizer } from '../ui/WaveformVisualizer';
-import { ShieldCheck, Lock, Sparkles } from 'lucide-react';
+import { BiometricShieldIllustration } from '../ui/Illustrations';
+import { ShieldCheck, Lock } from 'lucide-react';
 
 export const AuthLayout: React.FC = () => {
   return (
@@ -21,10 +22,13 @@ export const AuthLayout: React.FC = () => {
           </div>
 
           {/* Center Pitch & Waveform */}
-          <div className="relative z-10 my-12 space-y-6">
-            <h2 className="font-recoletta text-3xl md:text-4xl font-bold leading-tight tracking-tight text-white">
-              Own your voice IP. License at global scale.
-            </h2>
+          <div className="relative z-10 my-10 space-y-6">
+            <div className="flex items-center gap-3">
+              <BiometricShieldIllustration size={72} className="shrink-0" />
+              <h2 className="font-recoletta text-2xl md:text-3xl font-bold leading-tight tracking-tight text-white">
+                Own your voice IP. License at global scale.
+              </h2>
+            </div>
 
             <p className="font-berthold text-slate-300 text-sm md:text-base leading-relaxed">
               Every synthesized phoneme is cryptographically stamped with your SHA-256 biometric anchor, preventing deepfake exploitation and automating royalty attribution.

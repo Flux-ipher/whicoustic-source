@@ -1,8 +1,15 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { WaveformVisualizer } from '../../components/ui/WaveformVisualizer';
+import { PageTransition } from '../../components/ui/PageTransition';
+import {
+  TalentVoiceIllustration,
+  BiometricShieldIllustration,
+  RoyaltyEscrowIllustration,
+} from '../../components/ui/Illustrations';
 import {
   Mic,
   ShieldCheck,
@@ -11,16 +18,20 @@ import {
   Lock,
   Play,
   CheckCircle2,
-  Sparkles,
   Zap,
 } from 'lucide-react';
 
 export const HomePage: React.FC = () => {
   return (
-    <div className="space-y-24 pb-16">
+    <PageTransition className="space-y-24 pb-16">
       {/* 1. HERO SECTION */}
       <section className="relative pt-12 md:pt-20 px-6 max-w-container mx-auto">
-        <div className="text-center space-y-6 max-w-4xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          className="text-center space-y-6 max-w-4xl mx-auto"
+        >
           {/* Main Headline (Recoleta) with balanced wrap and clear proposition */}
           <h1 className="font-recoletta text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-on-surface leading-[1.12] [text-wrap:balance]">
             AI Voice Licensing & Biometric Protection for{' '}
@@ -75,7 +86,7 @@ export const HomePage: React.FC = () => {
               <span className="font-medium">Studio-calibrated 24 kHz synthesis</span>
             </span>
           </div>
-        </div>
+        </motion.div>
 
         {/* Hero Acoustic Visualizer Module */}
         <div className="mt-14 max-w-4xl mx-auto">
@@ -137,16 +148,18 @@ export const HomePage: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Pillar 1 */}
-          <Card elevation="elevated" padding="lg" hoverEffect className="space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-primary-container">
-              <Mic className="w-6 h-6" />
+          <Card elevation="elevated" padding="lg" hoverEffect className="space-y-4 flex flex-col justify-between">
+            <div>
+              <div className="h-28 flex items-center justify-center pb-2">
+                <TalentVoiceIllustration size={110} />
+              </div>
+              <h3 className="font-recoletta text-2xl font-bold text-on-surface">
+                Neural Synthesis Studio
+              </h3>
+              <p className="font-berthold text-sm text-slate-600 leading-relaxed mt-2">
+                Clone voice personas with under 5 minutes of clean audio. Train multilingual models that retain vocal timber, emotional inflection, and natural breath cadence.
+              </p>
             </div>
-            <h3 className="font-recoletta text-2xl font-bold text-on-surface">
-              Neural Synthesis Studio
-            </h3>
-            <p className="font-berthold text-sm text-slate-600 leading-relaxed">
-              Clone voice personas with under 5 minutes of clean audio. Train multilingual models that retain vocal timber, emotional inflection, and natural breath cadence.
-            </p>
             <ul className="space-y-2 text-xs font-berthold text-on-surface pt-2">
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-primary-container" />
@@ -160,16 +173,18 @@ export const HomePage: React.FC = () => {
           </Card>
 
           {/* Pillar 2 */}
-          <Card elevation="elevated" padding="lg" hoverEffect className="space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-on-surface">
-              <ShieldCheck className="w-6 h-6" />
+          <Card elevation="elevated" padding="lg" hoverEffect className="space-y-4 flex flex-col justify-between">
+            <div>
+              <div className="h-28 flex items-center justify-center pb-2">
+                <BiometricShieldIllustration size={110} />
+              </div>
+              <h3 className="font-recoletta text-2xl font-bold text-on-surface">
+                Cryptographic Watermarking
+              </h3>
+              <p className="font-berthold text-sm text-slate-600 leading-relaxed mt-2">
+                Imperceptible ultrasonic steganography binds every rendered second to a cryptographic hash. Clones generated outside your authorization are detected via 6-layer analysis.
+              </p>
             </div>
-            <h3 className="font-recoletta text-2xl font-bold text-on-surface">
-              Cryptographic Watermarking
-            </h3>
-            <p className="font-berthold text-sm text-slate-600 leading-relaxed">
-              Imperceptible ultrasonic steganography binds every rendered second to a cryptographic hash. Clones generated outside your authorization are detected via 6-layer analysis.
-            </p>
             <ul className="space-y-2 text-xs font-berthold text-on-surface pt-2">
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-primary-container" />
@@ -183,16 +198,18 @@ export const HomePage: React.FC = () => {
           </Card>
 
           {/* Pillar 3 */}
-          <Card elevation="elevated" padding="lg" hoverEffect className="space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-primary-container">
-              <Coins className="w-6 h-6" />
+          <Card elevation="elevated" padding="lg" hoverEffect className="space-y-4 flex flex-col justify-between">
+            <div>
+              <div className="h-28 flex items-center justify-center pb-2">
+                <RoyaltyEscrowIllustration size={110} />
+              </div>
+              <h3 className="font-recoletta text-2xl font-bold text-on-surface">
+                Automated Royalty Escrow
+              </h3>
+              <p className="font-berthold text-sm text-slate-600 leading-relaxed mt-2">
+                Programmatic licensing escrow ensures you get paid per second of game play, film dialogue, or commercial broadcast without chasing accounts receivable.
+              </p>
             </div>
-            <h3 className="font-recoletta text-2xl font-bold text-on-surface">
-              Automated Royalty Escrow
-            </h3>
-            <p className="font-berthold text-sm text-slate-600 leading-relaxed">
-              Programmatic licensing escrow ensures you get paid per second of game play, film dialogue, or commercial broadcast without chasing accounts receivable.
-            </p>
             <ul className="space-y-2 text-xs font-berthold text-on-surface pt-2">
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-primary-container" />
@@ -285,7 +302,7 @@ export const HomePage: React.FC = () => {
           </div>
         </div>
       </section>
-    </div>
+    </PageTransition>
   );
 };
 

@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { mockMarketplaceVoices, VoiceTalent } from '../../data/mock/marketplace';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { WaveformVisualizer } from '../../components/ui/WaveformVisualizer';
-import { Search, Filter, Play, Pause, ShieldCheck, Sparkles, SlidersHorizontal } from 'lucide-react';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { EmptySearchIllustration } from '../../components/ui/Illustrations';
+import { PageTransition } from '../../components/ui/PageTransition';
+import { Search, Play, Pause, ShieldCheck, SlidersHorizontal, RotateCcw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const MarketplacePage: React.FC = () => {
@@ -30,7 +34,7 @@ export const MarketplacePage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-container mx-auto px-6 py-12 space-y-10">
+    <PageTransition className="max-w-container mx-auto px-6 py-12 space-y-10">
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b border-outline-subtle">
         <div className="space-y-2">
@@ -50,7 +54,7 @@ export const MarketplacePage: React.FC = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search voice, accent, or style..."
-            className="w-full h-11 pl-11 pr-4 text-sm font-berthold bg-white rounded-pill border border-outline-border focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 shadow-sm"
+            className="w-full h-11 pl-11 pr-4 text-sm font-berthold bg-white rounded-pill border border-outline-border focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 shadow-sm transition-all"
           />
         </div>
       </div>
@@ -76,110 +80,144 @@ export const MarketplacePage: React.FC = () => {
         ))}
       </div>
 
-      {/* Voice Talent Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredVoices.map((voice) => {
-          const isPlaying = playingId === voice.id;
+      {/* Voice Talent Grid or Empty State */}
+      {filteredVoices.length === 0 ? (
+        <EmptyState
+          illustration={<EmptySearchIllustration size={180} />}
+          title="No voice personas found"
+          description={`We couldn't locate any verified models matching "${search || selectedCategory}". Try testing alternate search terms, or reset your filters.`}
+          actionLabel="Reset Search & Filters"
+          onAction={() => {
+            setSearch('');
+            setSelectedCategory('All');
+          }}
+          actionIcon={<RotateCcw className="w-4 h-4" />}
+          secondaryLabel="Submit Bespoke Casting Request"
+          secondaryHref="/contact"
+        />
+      ) : (
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: {
+              opacity: 1,
+              transition: { staggerChildren: 0.08 },
+            },
+          }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+        >
+          {filteredVoices.map((voice) => {
+            const isPlaying = playingId === voice.id;
 
-          return (
-            <Card
-              key={voice.id}
-              elevation="elevated"
-              padding="lg"
-              hoverEffect
-              className="flex flex-col justify-between space-y-5"
-            >
-              {/* Header: Avatar, Name & Verification */}
-              <div>
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={voice.avatar}
-                      alt={voice.name}
-                      className="w-14 h-14 rounded-full object-cover border-2 border-primary-container/30 shadow-sm"
-                    />
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <h3 className="font-recoletta text-lg font-bold text-on-surface">
-                          {voice.name}
-                        </h3>
-                        {voice.verified && (
-                          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                        )}
+            return (
+              <motion.div
+                key={voice.id}
+                variants={{
+                  hidden: { opacity: 0, y: 16 },
+                  visible: { opacity: 1, y: 0 },
+                }}
+              >
+                <Card
+                  elevation="elevated"
+                  padding="lg"
+                  hoverEffect
+                  className="flex flex-col justify-between space-y-5 h-full"
+                >
+                  {/* Header: Avatar, Name & Verification */}
+                  <div>
+                    <div className="flex items-start justify-between gap-4 mb-4">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={voice.avatar}
+                          alt={voice.name}
+                          className="w-14 h-14 rounded-full object-cover border-2 border-primary-container/30 shadow-sm"
+                        />
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <h3 className="font-recoletta text-lg font-bold text-on-surface">
+                              {voice.name}
+                            </h3>
+                            {voice.verified && (
+                              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                            )}
+                          </div>
+                          <p className="font-berthold text-xs text-slate-600">
+                            "{voice.stageName}"
+                          </p>
+                        </div>
                       </div>
-                      <p className="font-berthold text-xs text-slate-600">
-                        "{voice.stageName}"
-                      </p>
+                      <span className="text-xs font-berthold font-medium text-secondary">
+                        {voice.category}
+                      </span>
+                    </div>
+
+                    <p className="text-xs font-berthold text-secondary leading-relaxed line-clamp-2 mb-4">
+                      {voice.description}
+                    </p>
+
+                    {/* Accent & Language */}
+                    <div className="flex flex-wrap gap-1.5 mb-4">
+                      {voice.tags.map((t) => (
+                        <span
+                          key={t}
+                          className="px-2 py-0.5 rounded-pill bg-surface-container text-[11px] font-berthold text-secondary"
+                        >
+                          {t}
+                        </span>
+                      ))}
                     </div>
                   </div>
-                  <span className="text-xs font-berthold font-medium text-secondary">
-                    {voice.category}
-                  </span>
-                </div>
 
-                <p className="text-xs font-berthold text-secondary leading-relaxed line-clamp-2 mb-4">
-                  {voice.description}
-                </p>
-
-                {/* Accent & Language */}
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {voice.tags.map((t) => (
-                    <span
-                      key={t}
-                      className="px-2 py-0.5 rounded-pill bg-surface-container text-[11px] font-berthold text-secondary"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Audio Preview & Waveform */}
-              <div className="bg-surface-container/70 p-3.5 rounded-card border border-outline-subtle space-y-2">
-                <div className="flex items-center justify-between text-xs font-berthold">
-                  <button
-                    onClick={() => togglePlay(voice.id)}
-                    className="flex items-center gap-2 font-semibold text-primary-container hover:text-primary-hover"
-                  >
-                    {isPlaying ? (
-                      <Pause className="w-4 h-4 fill-current" />
-                    ) : (
-                      <Play className="w-4 h-4 fill-current" />
-                    )}
-                    <span>{isPlaying ? 'Pause Sample' : 'Listen Sample'}</span>
-                  </button>
-                  <span className="font-code text-[11px] text-secondary">
-                    {voice.accent}
-                  </span>
-                </div>
-                <WaveformVisualizer isPlaying={isPlaying} height={36} barCount={28} />
-              </div>
-
-              {/* Pricing & CTA */}
-              <div className="pt-3 border-t border-outline-subtle flex items-center justify-between">
-                <div>
-                  <span className="text-[11px] font-berthold uppercase tracking-wider text-secondary block">
-                    Starting At
-                  </span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="font-recoletta text-2xl font-bold text-on-surface">
-                      ${voice.hourlyRate}
-                    </span>
-                    <span className="text-xs font-berthold text-secondary">/hr</span>
+                  {/* Audio Preview & Waveform */}
+                  <div className="bg-surface-container/70 p-3.5 rounded-card border border-outline-subtle space-y-2">
+                    <div className="flex items-center justify-between text-xs font-berthold">
+                      <button
+                        onClick={() => togglePlay(voice.id)}
+                        className="flex items-center gap-2 font-semibold text-primary-container hover:text-primary-hover transition-colors"
+                      >
+                        {isPlaying ? (
+                          <Pause className="w-4 h-4 fill-current" />
+                        ) : (
+                          <Play className="w-4 h-4 fill-current" />
+                        )}
+                        <span>{isPlaying ? 'Pause Sample' : 'Listen Sample'}</span>
+                      </button>
+                      <span className="font-code text-[11px] text-secondary">
+                        {voice.accent}
+                      </span>
+                    </div>
+                    <WaveformVisualizer isPlaying={isPlaying} height={36} barCount={28} />
                   </div>
-                </div>
 
-                <Link to="/contact">
-                  <Button variant="primary" size="sm">
-                    Request License
-                  </Button>
-                </Link>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-    </div>
+                  {/* Pricing & CTA */}
+                  <div className="pt-3 border-t border-outline-subtle flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] font-berthold uppercase tracking-wider text-secondary block">
+                        Starting At
+                      </span>
+                      <div className="flex items-baseline gap-1">
+                        <span className="font-recoletta text-2xl font-bold text-on-surface">
+                          ${voice.hourlyRate}
+                        </span>
+                        <span className="text-xs font-berthold text-secondary">/hr</span>
+                      </div>
+                    </div>
+
+                    <Link to="/contact">
+                      <Button variant="primary" size="sm">
+                        Request License
+                      </Button>
+                    </Link>
+                  </div>
+                </Card>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      )}
+    </PageTransition>
   );
 };
 

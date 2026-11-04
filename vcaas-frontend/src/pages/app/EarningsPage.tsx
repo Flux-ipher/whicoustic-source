@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { StatCard } from '../../components/ui/StatCard';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { PageTransition } from '../../components/ui/PageTransition';
+import { RoyaltyEscrowIllustration } from '../../components/ui/Illustrations';
 import { mockMonthlyRevenue, mockDisbursements } from '../../data/mock/earnings';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { DollarSign, ArrowDownToLine, CheckCircle2, ShieldCheck, Zap } from 'lucide-react';
@@ -20,7 +23,7 @@ export const EarningsPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 pb-10">
+    <PageTransition className="space-y-8 pb-10">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-outline-subtle">
         <div className="space-y-1">
@@ -32,15 +35,18 @@ export const EarningsPage: React.FC = () => {
           </p>
         </div>
 
-        <Button
-          variant="primary"
-          size="md"
-          isLoading={isProcessingPayout}
-          onClick={handleRequestPayout}
-          icon={<ArrowDownToLine className="w-4 h-4" />}
-        >
-          {payoutSuccess ? 'Payout Initiated!' : 'Withdraw Cleared Escrow ($54,200)'}
-        </Button>
+        <div className="flex items-center gap-4">
+          <RoyaltyEscrowIllustration size={90} className="shrink-0 hidden md:inline-flex" />
+          <Button
+            variant="primary"
+            size="md"
+            isLoading={isProcessingPayout}
+            onClick={handleRequestPayout}
+            icon={<ArrowDownToLine className="w-4 h-4" />}
+          >
+            {payoutSuccess ? 'Payout Initiated!' : 'Withdraw Cleared Escrow ($54,200)'}
+          </Button>
+        </div>
       </div>
 
       {payoutSuccess && (
@@ -166,7 +172,7 @@ export const EarningsPage: React.FC = () => {
           </table>
         </div>
       </Card>
-    </div>
+    </PageTransition>
   );
 };
 

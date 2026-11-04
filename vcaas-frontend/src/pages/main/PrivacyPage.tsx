@@ -1,17 +1,22 @@
 import React from 'react';
 import { Card } from '../../components/ui/Card';
 import { ShieldCheck, EyeOff } from 'lucide-react';
+import { PageTransition } from '../../components/ui/PageTransition';
+import { BiometricShieldIllustration } from '../../components/ui/Illustrations';
 
 export const PrivacyPage: React.FC = () => {
   return (
-    <div className="max-w-container mx-auto px-6 py-12 space-y-10">
-      <div className="max-w-3xl space-y-3">
-        <h1 className="font-recoletta text-4xl sm:text-5xl font-bold text-on-surface">
-          Privacy Policy & Biometric Governance
-        </h1>
-        <p className="font-berthold text-slate-600 text-sm">
-          How we safeguard raw vocal recordings, isolate neural model weights, and enforce zero-retention raw audio policies.
-        </p>
+    <PageTransition className="max-w-container mx-auto px-6 py-12 space-y-10">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-outline-subtle">
+        <div className="max-w-2xl space-y-3">
+          <h1 className="font-recoletta text-4xl sm:text-5xl font-bold text-on-surface">
+            Privacy Policy & Biometric Governance
+          </h1>
+          <p className="font-berthold text-slate-600 text-sm sm:text-base leading-relaxed">
+            How we safeguard raw vocal recordings, isolate neural model weights, and enforce zero-retention raw audio policies.
+          </p>
+        </div>
+        <BiometricShieldIllustration size={130} className="shrink-0 hidden sm:inline-flex" />
       </div>
 
       <div className="max-w-4xl space-y-6">
@@ -44,7 +49,7 @@ export const PrivacyPage: React.FC = () => {
           </section>
         </Card>
       </div>
-    </div>
+    </PageTransition>
   );
 };
 

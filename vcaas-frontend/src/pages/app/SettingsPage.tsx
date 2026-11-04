@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { PageTransition } from '../../components/ui/PageTransition';
+import { BiometricShieldIllustration } from '../../components/ui/Illustrations';
 import { ShieldCheck, Key, Copy, Check, RefreshCw, Lock, AlertTriangle } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
@@ -25,14 +27,17 @@ export const SettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 max-w-4xl pb-10">
-      <div className="pb-6 border-b border-outline-subtle space-y-1">
-        <h2 className="font-recoletta text-3xl font-bold text-on-surface">
-          Security & API Key Provisioning
-        </h2>
-        <p className="font-berthold text-xs text-slate-600">
-          Manage your biometric root certificate, rotate ultrasonic watermarking seeds, and provision production API credentials.
-        </p>
+    <PageTransition className="space-y-8 max-w-4xl pb-10">
+      <div className="pb-6 border-b border-outline-subtle flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <h2 className="font-recoletta text-3xl font-bold text-on-surface">
+            Security & API Key Provisioning
+          </h2>
+          <p className="font-berthold text-xs text-slate-600">
+            Manage your biometric root certificate, rotate ultrasonic watermarking seeds, and provision production API credentials.
+          </p>
+        </div>
+        <BiometricShieldIllustration size={100} className="shrink-0 hidden sm:inline-flex" />
       </div>
 
       {/* 1. Biometric Root Vault Hash */}
@@ -125,7 +130,7 @@ export const SettingsPage: React.FC = () => {
           </button>
         </div>
       </Card>
-    </div>
+    </PageTransition>
   );
 };
 

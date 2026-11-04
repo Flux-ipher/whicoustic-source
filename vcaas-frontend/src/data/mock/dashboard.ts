@@ -81,3 +81,4 @@ export const mockRecentActivity = [
     badgeVariant: 'amber' as const,
   },
 ];
+

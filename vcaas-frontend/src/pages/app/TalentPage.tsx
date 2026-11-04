@@ -135,3 +135,4 @@ export const TalentPage: React.FC = () => {
     </div>
   );
 };
+

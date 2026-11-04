@@ -127,3 +127,4 @@ export const RoyaltiesPage: React.FC = () => {
     </div>
   );
 };
+

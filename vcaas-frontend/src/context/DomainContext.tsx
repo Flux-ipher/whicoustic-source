@@ -55,30 +55,39 @@ export const DomainProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const isSubdomain = domain === 'app';
 
   const navigateToSubdomain = (path: string = '/dashboard') => {
+    const configuredSubdomain = import.meta.env.VITE_APP_SUBDOMAIN;
+    const protocol = import.meta.env.VITE_PROTOCOL || window.location.protocol;
     const hostname = window.location.hostname;
     const port = window.location.port ? `:${window.location.port}` : '';
-    const protocol = window.location.protocol;
 
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      // Local development with app.localhost
-      // We can directly navigate to app.localhost:5173
+    if (configuredSubdomain && !hostname.startsWith('app.')) {
+      // Use configured environment target
+      const target = configuredSubdomain.includes(':')
+        ? configuredSubdomain
+        : `${configuredSubdomain}${port}`;
+      window.location.href = `${protocol}//${target}${path}`;
+    } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
       window.location.href = `${protocol}//app.localhost${port}${path}`;
     } else if (hostname.includes('.') && !hostname.startsWith('app.')) {
-      // Production e.g. vcaas.com -> app.vcaas.com
       window.location.href = `${protocol}//app.${hostname}${port}${path}`;
     } else {
-      // Internal state toggle fallback
       setDomain('app');
       window.location.pathname = path;
     }
   };
 
   const navigateToMainDomain = (path: string = '/') => {
+    const configuredMain = import.meta.env.VITE_MAIN_DOMAIN;
+    const protocol = import.meta.env.VITE_PROTOCOL || window.location.protocol;
     const hostname = window.location.hostname;
     const port = window.location.port ? `:${window.location.port}` : '';
-    const protocol = window.location.protocol;
 
-    if (hostname.startsWith('app.localhost')) {
+    if (configuredMain && hostname.startsWith('app.')) {
+      const target = configuredMain.includes(':')
+        ? configuredMain
+        : `${configuredMain}${port}`;
+      window.location.href = `${protocol}//${target}${path}`;
+    } else if (hostname.startsWith('app.localhost')) {
       window.location.href = `${protocol}//localhost${port}${path}`;
     } else if (hostname.startsWith('app.')) {
       const rootDomain = hostname.replace(/^app\./, '');

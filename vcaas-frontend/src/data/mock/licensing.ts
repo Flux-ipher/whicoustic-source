@@ -92,3 +92,4 @@ export const mockLicensingRequests: LicensingRequest[] = [
     forensicWatermarkReq: false,
   },
 ];
+

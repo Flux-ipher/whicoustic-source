@@ -186,3 +186,4 @@ export const MarketplacePage: React.FC = () => {
     </div>
   );
 };
+

@@ -173,3 +173,4 @@ export const EarningsPage: React.FC = () => {
     </div>
   );
 };
+

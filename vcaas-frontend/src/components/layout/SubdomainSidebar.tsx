@@ -139,3 +139,4 @@ export const SubdomainSidebar: React.FC = () => {
     </aside>
   );
 };
+

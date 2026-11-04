@@ -24,6 +24,7 @@ Thumbs.db
 *.zip
 .agents/
 .agent/
+/page.tsx
 
 # Secrets & Environment variables
 .env

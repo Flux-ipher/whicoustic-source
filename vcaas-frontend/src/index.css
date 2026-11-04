@@ -1,4 +1,58 @@
-@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-recoletta: 'Recoleta', 'Georgia', serif;
+  --font-berthold: 'Block Berthold Regular', 'Helvetica Neue', Arial, sans-serif;
+  --font-lora: 'Lora', 'Georgia', serif;
+  --font-code: 'JetBrains Mono', monospace;
+
+  --color-primary: #855300;
+  --color-primary-container: #F59E0B;
+  --color-primary-hover: #D97706;
+  --color-primary-dark: #B45309;
+  --color-primary-fixed: #FFDDB8;
+  --color-primary-fixed-dim: #FFB95F;
+
+  --color-secondary: #565E74;
+  --color-secondary-container: #DAE2FD;
+  --color-secondary-fixed: #DAE2FD;
+  --color-secondary-fixed-dim: #BEC6E0;
+
+  --color-tertiary: #904D00;
+  --color-tertiary-container: #FF9837;
+
+  --color-surface: #F8F9FF;
+  --color-surface-dim: #CBDBF5;
+  --color-surface-bright: #F8F9FF;
+  --color-surface-container: #E5EEFF;
+  --color-surface-container-low: #EFF4FF;
+  --color-surface-container-high: #DCE9FF;
+  --color-surface-container-highest: #D3E4FE;
+  --color-surface-container-lowest: #FFFFFF;
+
+  --color-background: #F8F9FF;
+  --color-on-surface: #0B1C30;
+  --color-on-surface-variant: #534434;
+  --color-inverse-surface: #213145;
+  --color-inverse-on-surface: #EAF1FF;
+
+  --color-outline: #867461;
+  --color-outline-variant: #D8C3AD;
+  --color-outline-subtle: #E2E8F0;
+  --color-outline-border: #CBD5E1;
+
+  --color-error: #BA1A1A;
+
+  --radius-pill: 9999px;
+  --radius-card: 16px;
+  --radius-card-lg: 24px;
+  --radius-input: 8px;
+
+  --shadow-card: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.02);
+  --shadow-elevated: 0 10px 30px -5px rgba(15, 23, 42, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+  --shadow-amber-glow: 0 4px 14px 0 rgba(245, 158, 11, 0.35);
+  --shadow-amber-focus: 0 0 0 3px rgba(245, 158, 11, 0.2);
+}
 
 @font-face {
   font-family: 'Recoleta';
@@ -16,26 +70,20 @@
   font-display: swap;
 }
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+html {
+  scroll-behavior: smooth;
+}
 
-@layer base {
-  :root {
-    color-scheme: light;
-  }
-  
-  html {
-    scroll-behavior: smooth;
-  }
+body {
+  background-color: var(--color-background);
+  color: var(--color-on-surface);
+  font-family: var(--font-berthold);
+  -webkit-font-smoothing: antialiased;
+}
 
-  body {
-    @apply bg-background text-on-surface font-berthold antialiased selection:bg-primary-container selection:text-white;
-  }
-
-  h1, h2, h3, h4 {
-    @apply font-recoletta tracking-tight;
-  }
+h1, h2, h3, h4 {
+  font-family: var(--font-recoletta);
+  letter-spacing: -0.02em;
 }
 
 /* Custom subtle scrollbars for dense telemetry and studio panes */
@@ -55,18 +103,4 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
-}
-
-/* Acoustic amber glow animation */
-@keyframes amberPulse {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 0 8px rgba(245, 158, 11, 0);
-  }
-}
-
-.amber-pulse-badge {
-  animation: amberPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

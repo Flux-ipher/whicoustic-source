@@ -1,19 +1,15 @@
 import React from 'react';
 import { Card } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
 import { ShieldCheck, Lock, FileText } from 'lucide-react';
 
 export const TermsPage: React.FC = () => {
   return (
     <div className="max-w-container mx-auto px-6 py-12 space-y-10">
       <div className="max-w-3xl space-y-3">
-        <Badge variant="neutral" size="sm" icon={<FileText className="w-3.5 h-3.5 text-primary-container" />}>
-          Legal & Cryptographic Governance
-        </Badge>
         <h1 className="font-recoletta text-4xl sm:text-5xl font-bold text-on-surface">
           Terms of Service & Licensing Protocol
         </h1>
-        <p className="font-lora italic text-secondary text-base">
+        <p className="font-berthold text-slate-600 text-sm">
           Last revised: November 2026 • Governed by SAG-AFTRA Digital Persona Framework & NIST Acoustic Steganography Standards.
         </p>
       </div>

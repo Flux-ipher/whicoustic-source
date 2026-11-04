@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Card } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { mockLicensingRequests, LicensingRequest } from '../../data/mock/licensing';
 import { FileCheck2, Check, X, ShieldCheck, DollarSign, Filter, Eye } from 'lucide-react';
@@ -30,14 +29,11 @@ export const LicensingPage: React.FC = () => {
     <div className="space-y-8 pb-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-outline-subtle">
         <div className="space-y-1">
-          <Badge variant="amber" size="sm" icon={<FileCheck2 className="w-3.5 h-3.5" />}>
-            Smart Contract Approvals
-          </Badge>
           <h2 className="font-recoletta text-3xl font-bold text-on-surface">
             Studio Licensing Inbound Requests
           </h2>
-          <p className="font-lora italic text-xs text-secondary">
-            Review production proposals, usage scopes, and smart contract royalty splits before granting neural weights access.
+          <p className="font-berthold text-xs text-slate-600">
+            Review production proposals, usage scopes, and automated royalty splits before granting neural weights access.
           </p>
         </div>
 
@@ -90,14 +86,17 @@ export const LicensingPage: React.FC = () => {
                     {req.royaltySplitPct}%
                   </td>
                   <td className="py-4 px-4">
-                    <Badge
-                      variant={
-                        req.status === 'APPROVED' ? 'success' : req.status === 'REJECTED' ? 'neutral' : 'amber'
-                      }
-                      size="sm"
+                    <span
+                      className={`text-xs font-medium ${
+                        req.status === 'APPROVED'
+                          ? 'text-emerald-700'
+                          : req.status === 'REJECTED'
+                          ? 'text-slate-500'
+                          : 'text-amber-700'
+                      }`}
                     >
                       {req.status}
-                    </Badge>
+                    </span>
                   </td>
                   <td className="py-4 px-6 text-right">
                     <div className="flex items-center justify-end gap-2">

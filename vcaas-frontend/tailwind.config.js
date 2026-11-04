@@ -59,7 +59,6 @@ export default {
       fontFamily: {
         recoleta: ['Recoleta', 'Georgia', 'serif'],
         berthold: ['"Block Berthold Regular"', '"Helvetica Neue"', 'Arial', 'sans-serif'],
-        lora: ['Lora', 'Georgia', 'serif'],
         code: ['"JetBrains Mono"', 'monospace'],
       },
       borderRadius: {

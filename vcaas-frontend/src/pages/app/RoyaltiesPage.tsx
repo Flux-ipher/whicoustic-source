@@ -1,6 +1,5 @@
 import React from 'react';
 import { Card } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { PieChart, ResponsiveContainer, Pie, Cell, Tooltip } from 'recharts';
 import { ShieldCheck, FileText, ArrowUpRight, Coins } from 'lucide-react';
@@ -17,13 +16,10 @@ export const RoyaltiesPage: React.FC = () => {
     <div className="space-y-8 pb-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-outline-subtle">
         <div className="space-y-1">
-          <Badge variant="amber" size="sm" icon={<Coins className="w-3.5 h-3.5" />}>
-            Smart Contract Protocol
-          </Badge>
           <h2 className="font-recoletta text-3xl font-bold text-on-surface">
             Licensing & Royalties Portal
           </h2>
-          <p className="font-lora italic text-xs text-secondary">
+          <p className="font-berthold text-xs text-slate-600">
             Continuous verification of active licenses, downstream syndicated broadcasts, and territorial splits.
           </p>
         </div>

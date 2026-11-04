@@ -34,8 +34,8 @@ export const OnboardingLayout: React.FC = () => {
       </main>
 
       {/* Footer Note */}
-      <footer className="py-4 text-center text-xs font-lora italic text-secondary border-t border-outline-subtle bg-white">
-        Forensic audio biometric encryption applied in real time. ISO/IEC 27001 compliant.
+      <footer className="py-4 text-center text-xs font-berthold text-slate-500 border-t border-outline-subtle bg-white">
+        Acoustic biometric encryption applied in real time. ISO/IEC 27001 compliant.
       </footer>
     </div>
   );

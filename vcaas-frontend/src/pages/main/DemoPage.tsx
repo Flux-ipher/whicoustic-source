@@ -549,14 +549,10 @@ export const DemoPage: React.FC = () => {
             transition={{ duration: 0.5 }}
             className="ld-header-inner"
           >
-            <div className="ld-badge">
-              <Radio size={12} className={listening ? 'animate-pulse text-amber-400' : ''} />
-              6-Layer Biometric Defense Demo
-            </div>
             <h1 className="ld-title font-recoletta">
               Real-Time Voice Authentication
             </h1>
-            <p className="ld-subtitle font-lora italic">
+            <p className="ld-subtitle font-berthold text-slate-700">
               Speak into your microphone. The 6-layer detection engine continuously evaluates voice authenticity in real time — streaming per-window telemetry and layer diagnostics.
             </p>
           </motion.div>
@@ -706,7 +702,7 @@ export const DemoPage: React.FC = () => {
                   className="ld-verdict-empty"
                 >
                   <div className="ld-verdict-empty-ring" />
-                  <span className="font-lora italic text-secondary">Waiting for microphone audio stream…</span>
+                  <span className="font-berthold text-slate-500">Waiting for microphone audio stream…</span>
                 </motion.div>
               ) : (
                 <motion.div
@@ -820,7 +816,7 @@ export const DemoPage: React.FC = () => {
 
           <div className="ld-timeline-track">
             {history.length === 0 ? (
-              <span className="ld-timeline-empty font-lora italic">
+              <span className="ld-timeline-empty font-berthold text-slate-500">
                 Timeline ticks will stream continuously as audio chunks are processed…
               </span>
             ) : (

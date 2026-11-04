@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Card } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { ShieldCheck, Key, Copy, Check, RefreshCw, Lock, AlertTriangle } from 'lucide-react';
@@ -28,13 +27,10 @@ export const SettingsPage: React.FC = () => {
   return (
     <div className="space-y-8 max-w-4xl pb-10">
       <div className="pb-6 border-b border-outline-subtle space-y-1">
-        <Badge variant="amber" size="sm" icon={<ShieldCheck className="w-3.5 h-3.5" />}>
-          Cryptographic Provenance Controls
-        </Badge>
         <h2 className="font-recoletta text-3xl font-bold text-on-surface">
           Security & API Key Provisioning
         </h2>
-        <p className="font-lora italic text-xs text-secondary">
+        <p className="font-berthold text-xs text-slate-600">
           Manage your biometric root certificate, rotate ultrasonic watermarking seeds, and provision production API credentials.
         </p>
       </div>
@@ -48,9 +44,9 @@ export const SettingsPage: React.FC = () => {
               Biometric Root SHA-256 Vault Hash
             </h3>
           </div>
-          <Badge variant="amber" size="sm">
-            Active Forensic Anchor
-          </Badge>
+          <span className="text-xs font-code text-primary-container font-semibold">
+            Active Biometric Anchor
+          </span>
         </div>
 
         <p className="text-xs font-berthold text-secondary leading-relaxed">
@@ -76,9 +72,9 @@ export const SettingsPage: React.FC = () => {
               Synthesis API Secret Key
             </h3>
           </div>
-          <Badge variant="neutral" size="sm">
+          <span className="text-xs font-code text-slate-500">
             Live Production Key
-          </Badge>
+          </span>
         </div>
 
         <p className="text-xs font-berthold text-secondary leading-relaxed">

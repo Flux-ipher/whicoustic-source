@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Card } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { WaveformVisualizer } from '../../components/ui/WaveformVisualizer';
 import { mockCloneJobs, CloneJob } from '../../data/mock/studio';
@@ -37,13 +36,10 @@ export const StudioPage: React.FC = () => {
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-outline-subtle">
         <div className="space-y-1">
-          <Badge variant="amber" size="sm" icon={<Sparkles className="w-3.5 h-3.5" />}>
-            Neural Voice Synthesis Engine v2.4
-          </Badge>
           <h2 className="font-recoletta text-3xl font-bold text-on-surface">
             Voice Cloning Studio
           </h2>
-          <p className="font-lora italic text-xs text-secondary">
+          <p className="font-berthold text-xs text-slate-600">
             Upload studio audio to train custom multilingual neural weights anchored to your biometric passport.
           </p>
         </div>
@@ -132,9 +128,9 @@ export const StudioPage: React.FC = () => {
               <h4 className="font-recoletta text-base font-bold text-on-surface">
                 Real-Time Synthesis Monitor
               </h4>
-              <Badge variant="amber" size="sm" pulse>
+              <span className="text-xs font-code text-primary-container font-semibold">
                 Active
-              </Badge>
+              </span>
             </div>
 
             <div className="bg-surface-container p-4 rounded-card space-y-3">
@@ -198,9 +194,9 @@ export const StudioPage: React.FC = () => {
                   </td>
                   <td className="py-3.5 px-4 font-code text-secondary">{job.latencyMs} ms</td>
                   <td className="py-3.5 px-4">
-                    <Badge variant={job.status === 'READY' ? 'success' : 'amber'} size="sm">
+                    <span className={`text-xs font-medium ${job.status === 'READY' ? 'text-emerald-700' : 'text-amber-700'}`}>
                       {job.status}
-                    </Badge>
+                    </span>
                   </td>
                   <td className="py-3.5 px-4 text-right">
                     <button className="text-secondary hover:text-error transition-colors p-1">

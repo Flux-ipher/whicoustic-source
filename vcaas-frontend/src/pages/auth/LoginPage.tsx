@@ -28,8 +28,8 @@ export const LoginPage: React.FC = () => {
         <h2 className="font-recoletta text-3xl font-bold text-on-surface">
           Console Login
         </h2>
-        <p className="font-lora italic text-xs text-secondary">
-          Enter your credentials to access the platform sub-domain (app.whicoustic.ai).
+        <p className="font-berthold text-xs text-slate-600">
+          Enter your credentials to access the platform console (app.whicoustic.ai).
         </p>
       </div>
 
@@ -97,7 +97,7 @@ export const LoginPage: React.FC = () => {
             Register & Calibrate Anchor
           </Link>
         </p>
-        <p className="text-[11px] font-lora italic text-secondary/80 flex items-center justify-center gap-1">
+        <p className="text-[11px] font-berthold text-slate-500 flex items-center justify-center gap-1">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
           Multi-factor cryptographic authentication enforced.
         </p>

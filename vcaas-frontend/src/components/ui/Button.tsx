@@ -24,9 +24,9 @@ export const Button: React.FC<ButtonProps> = ({
     'inline-flex items-center justify-center font-berthold font-medium rounded-pill transition-all duration-200 select-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none active:scale-[0.98]';
 
   const variants = {
-    // Primary Amber Pill CTA
+    // Primary Amber Pill CTA - dark slate text on amber for accessible WCAG contrast
     primary:
-      'bg-primary-container text-white hover:bg-primary-hover shadow-amber-glow hover:shadow-lg',
+      'bg-primary-container text-[#0B1C30] hover:bg-primary-hover shadow-amber-glow hover:shadow-lg font-semibold',
     // Secondary Outlined Pill
     secondary:
       'bg-white text-on-surface border border-outline-subtle hover:border-on-surface hover:bg-surface-container-low shadow-sm',

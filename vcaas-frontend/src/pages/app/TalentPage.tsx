@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Card } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { WaveformVisualizer } from '../../components/ui/WaveformVisualizer';
 import { useAuth } from '../../context/AuthContext';
@@ -50,11 +49,11 @@ export const TalentPage: React.FC = () => {
                 <h2 className="font-recoletta text-2xl font-bold text-on-surface">
                   {user?.name || 'Elena Rostova'}
                 </h2>
-                <Badge variant="amber" size="sm" icon={<ShieldCheck className="w-3.5 h-3.5" />}>
-                  Verified Biometric Persona
-                </Badge>
+                <span className="text-xs font-medium text-emerald-700 flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5" /> Verified
+                </span>
               </div>
-              <p className="font-lora italic text-xs text-secondary">
+              <p className="font-berthold text-xs text-slate-600">
                 "Siren of the North" • Slavic-British Mid-Atlantic Resonant Tone
               </p>
               <div className="flex items-center gap-3 text-xs font-berthold text-secondary pt-1">
@@ -80,7 +79,7 @@ export const TalentPage: React.FC = () => {
             <h3 className="font-recoletta text-xl font-bold text-on-surface">
               Featured Voice Demo Reels
             </h3>
-            <p className="font-lora italic text-xs text-secondary">
+            <p className="font-berthold text-xs text-slate-600">
               Published on the main domain Voice IP Marketplace (whicoustic.ai/marketplace)
             </p>
           </div>
@@ -123,9 +122,9 @@ export const TalentPage: React.FC = () => {
 
                 <div className="flex items-center gap-4 text-xs font-berthold shrink-0">
                   <span className="text-secondary font-code">{sample.licenseCount} Studios Licensed</span>
-                  <Badge variant="neutral" size="sm">
+                  <span className="text-xs font-code text-slate-500">
                     Watermarked
-                  </Badge>
+                  </span>
                 </div>
               </Card>
             );

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { mockMarketplaceVoices, VoiceTalent } from '../../data/mock/marketplace';
 import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
 import { Card } from '../../components/ui/Card';
 import { WaveformVisualizer } from '../../components/ui/WaveformVisualizer';
 import { Search, Filter, Play, Pause, ShieldCheck, Sparkles, SlidersHorizontal } from 'lucide-react';
@@ -35,13 +34,10 @@ export const MarketplacePage: React.FC = () => {
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b border-outline-subtle">
         <div className="space-y-2">
-          <Badge variant="amber" size="sm" icon={<Sparkles className="w-3 h-3" />}>
-            Verified Talent Registry
-          </Badge>
           <h1 className="font-recoletta text-4xl sm:text-5xl font-bold text-on-surface">
             Voice IP Marketplace
           </h1>
-          <p className="font-lora italic text-secondary text-base max-w-xl">
+          <p className="font-berthold text-slate-700 text-base max-w-xl">
             Browse legally verified, SHA-256 watermarked neural voice personas available for instant license across games, streaming, and global advertising.
           </p>
         </div>
@@ -111,14 +107,14 @@ export const MarketplacePage: React.FC = () => {
                           <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                         )}
                       </div>
-                      <p className="font-lora italic text-xs text-secondary">
+                      <p className="font-berthold text-xs text-slate-600">
                         "{voice.stageName}"
                       </p>
                     </div>
                   </div>
-                  <Badge variant="neutral" size="sm">
+                  <span className="text-xs font-berthold font-medium text-secondary">
                     {voice.category}
-                  </Badge>
+                  </span>
                 </div>
 
                 <p className="text-xs font-berthold text-secondary leading-relaxed line-clamp-2 mb-4">

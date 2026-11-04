@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
 import { Card } from '../../components/ui/Card';
 import { StepIndicator, Step } from '../../components/ui/StepIndicator';
 import { WaveformVisualizer } from '../../components/ui/WaveformVisualizer';
@@ -61,13 +60,10 @@ export const OnboardingFlow: React.FC = () => {
       {currentStep === 1 && (
         <Card elevation="elevated" padding="lg" className="space-y-8 animate-fadeIn">
           <div className="text-center space-y-2 max-w-lg mx-auto">
-            <Badge variant="amber" size="sm" icon={<Sparkles className="w-3.5 h-3.5" />}>
-              Step 1 of 3: Persona Selection
-            </Badge>
             <h2 className="font-recoletta text-3xl font-bold text-on-surface">
               Welcome, {user?.name || 'Artist'}. Define Your Persona.
             </h2>
-            <p className="font-lora italic text-xs text-secondary">
+            <p className="font-berthold text-xs text-slate-600">
               Configure your licensing identity and primary domain of artistic work.
             </p>
           </div>
@@ -142,13 +138,13 @@ export const OnboardingFlow: React.FC = () => {
       {currentStep === 2 && (
         <Card elevation="amber-border" padding="lg" className="space-y-8 animate-fadeIn">
           <div className="text-center space-y-2 max-w-lg mx-auto">
-            <Badge variant="amber" size="sm" pulse icon={<ShieldCheck className="w-3.5 h-3.5" />}>
+            <span className="text-xs font-berthold font-semibold tracking-wider text-primary-container uppercase">
               Step 2 of 3: Biometric Calibration
-            </Badge>
+            </span>
             <h2 className="font-recoletta text-3xl font-bold text-on-surface">
               Record Acoustic Anchor
             </h2>
-            <p className="font-lora italic text-xs text-secondary">
+            <p className="font-berthold text-xs text-slate-600">
               Read the test phrase into your microphone to calibrate your ultrasonic SHA-256 watermark.
             </p>
           </div>
@@ -224,13 +220,13 @@ export const OnboardingFlow: React.FC = () => {
       {currentStep === 3 && (
         <Card elevation="elevated" padding="lg" className="space-y-8 animate-fadeIn">
           <div className="text-center space-y-2 max-w-lg mx-auto">
-            <Badge variant="amber" size="sm" icon={<Lock className="w-3.5 h-3.5" />}>
+            <span className="text-xs font-berthold font-semibold tracking-wider text-primary-container uppercase">
               Step 3 of 3: Final Activation
-            </Badge>
+            </span>
             <h2 className="font-recoletta text-3xl font-bold text-on-surface">
               Vault Key & Escrow Governance
             </h2>
-            <p className="font-lora italic text-xs text-secondary">
+            <p className="font-berthold text-xs text-slate-600">
               Review your cryptographic credentials. You will be redirected to your private dashboard on the sub-domain.
             </p>
           </div>
@@ -272,7 +268,7 @@ export const OnboardingFlow: React.FC = () => {
                 onChange={(e) => updateOnboardingData({ royaltyFloorPct: parseFloat(e.target.value) })}
                 className="w-full h-2 bg-surface-container rounded-lg appearance-none cursor-pointer accent-primary-container"
               />
-              <p className="text-[11px] font-lora italic text-secondary">
+              <p className="text-[11px] font-berthold text-slate-500">
                 Inbound licensing requests below this percentage threshold will be filtered out automatically.
               </p>
             </div>

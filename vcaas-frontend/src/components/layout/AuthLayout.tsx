@@ -16,29 +16,24 @@ export const AuthLayout: React.FC = () => {
           {/* Top Logo */}
           <div className="relative z-10">
             <Link to="/" className="inline-block group">
-              <BrandLogo variant="white" type="full" className="h-11 w-auto transition-transform group-hover:scale-[1.02]" alt="Whicoustic" />
+              <BrandLogo variant="white" type="wordmark" className="h-8 w-auto transition-transform group-hover:scale-[1.02]" alt="Whicoustic" />
             </Link>
           </div>
 
           {/* Center Pitch & Waveform */}
           <div className="relative z-10 my-12 space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-pill bg-white/10 border border-white/15 text-xs font-berthold text-primary-container">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Forensic Neural Synthesis</span>
-            </div>
-
             <h2 className="font-recoletta text-3xl md:text-4xl font-bold leading-tight tracking-tight text-white">
               Own your voice IP. License at global scale.
             </h2>
 
-            <p className="font-lora italic text-secondary-fixed-dim text-sm md:text-base leading-relaxed">
+            <p className="font-berthold text-slate-300 text-sm md:text-base leading-relaxed">
               Every synthesized phoneme is cryptographically stamped with your SHA-256 biometric anchor, preventing deepfake exploitation and automating royalty attribution.
             </p>
 
             <div className="bg-white/5 p-4 rounded-card border border-white/10 backdrop-blur-sm">
               <div className="flex items-center justify-between text-xs font-code text-white/70 mb-2">
                 <span>Active Anchor Frequency</span>
-                <span className="text-primary-container">24-Bit / 96kHz</span>
+                <span className="text-primary-container">24 kHz Studio Neural</span>
               </div>
               <WaveformVisualizer height={48} barCount={32} />
             </div>

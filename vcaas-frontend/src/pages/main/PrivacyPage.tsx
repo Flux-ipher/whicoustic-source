@@ -1,19 +1,15 @@
 import React from 'react';
 import { Card } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
 import { ShieldCheck, EyeOff } from 'lucide-react';
 
 export const PrivacyPage: React.FC = () => {
   return (
     <div className="max-w-container mx-auto px-6 py-12 space-y-10">
       <div className="max-w-3xl space-y-3">
-        <Badge variant="amber" size="sm" icon={<ShieldCheck className="w-3.5 h-3.5 text-primary-container" />}>
-          Biometric Protection Charter
-        </Badge>
         <h1 className="font-recoletta text-4xl sm:text-5xl font-bold text-on-surface">
           Privacy Policy & Biometric Governance
         </h1>
-        <p className="font-lora italic text-secondary text-base">
+        <p className="font-berthold text-slate-600 text-sm">
           How we safeguard raw vocal recordings, isolate neural model weights, and enforce zero-retention raw audio policies.
         </p>
       </div>

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { StatCard } from '../../components/ui/StatCard';
 import { Card } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { mockMonthlyRevenue, mockDisbursements } from '../../data/mock/earnings';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
@@ -25,14 +24,11 @@ export const EarningsPage: React.FC = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-outline-subtle">
         <div className="space-y-1">
-          <Badge variant="amber" size="sm" icon={<DollarSign className="w-3.5 h-3.5" />}>
-            Automated Escrow Protocol
-          </Badge>
           <h2 className="font-recoletta text-3xl font-bold text-on-surface">
             Earnings & Royalty Disbursements
           </h2>
-          <p className="font-lora italic text-xs text-secondary">
-            Continuous acoustic telemetry settlement. Funds cleared directly to your banking institution or Ethereum vault.
+          <p className="font-berthold text-xs text-slate-600">
+            Continuous acoustic telemetry settlement. Funds cleared directly to your banking institution or account vault.
           </p>
         </div>
 
@@ -93,7 +89,7 @@ export const EarningsPage: React.FC = () => {
             <h3 className="font-recoletta text-xl font-bold text-on-surface">
               Monthly Invoiced Revenue Breakdown
             </h3>
-            <p className="font-lora italic text-xs text-secondary">
+            <p className="font-berthold text-xs text-slate-600">
               Fixed licensing upfronts vs. streaming per-second variable royalties
             </p>
           </div>
@@ -160,9 +156,9 @@ export const EarningsPage: React.FC = () => {
                   <td className="py-3.5 px-4 text-secondary">{item.paymentMethod}</td>
                   <td className="py-3.5 px-4 font-code text-primary-container">{item.txHash}</td>
                   <td className="py-3.5 px-6 text-right">
-                    <Badge variant="success" size="sm">
+                    <span className="text-xs font-medium text-emerald-700">
                       {item.status}
-                    </Badge>
+                    </span>
                   </td>
                 </tr>
               ))}

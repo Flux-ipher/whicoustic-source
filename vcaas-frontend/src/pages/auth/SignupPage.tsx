@@ -42,7 +42,7 @@ export const SignupPage: React.FC = () => {
         <h2 className="font-recoletta text-3xl font-bold text-on-surface">
           Create Voice Vault
         </h2>
-        <p className="font-lora italic text-xs text-secondary">
+        <p className="font-berthold text-xs text-slate-600">
           Register with your email or federated identity to begin biometric anchor calibration.
         </p>
       </div>
@@ -145,7 +145,7 @@ export const SignupPage: React.FC = () => {
             Console Sign In
           </Link>
         </p>
-        <p className="text-[11px] font-lora italic text-secondary/80 flex items-center justify-center gap-1">
+        <p className="text-[11px] font-berthold text-slate-500 flex items-center justify-center gap-1">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
           Zero raw vocal storage without encryption.
         </p>

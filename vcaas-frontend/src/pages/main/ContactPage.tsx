@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Mail, Phone, MapPin, Send, CheckCircle2, ShieldCheck } from 'lucide-react';
@@ -23,14 +22,11 @@ export const ContactPage: React.FC = () => {
   return (
     <div className="max-w-container mx-auto px-6 py-12 space-y-12">
       <div className="max-w-2xl mx-auto text-center space-y-3">
-        <Badge variant="amber" size="sm">
-          Direct Studio Advisory
-        </Badge>
         <h1 className="font-recoletta text-4xl sm:text-5xl font-bold text-on-surface">
           Schedule a Studio Consultation
         </h1>
-        <p className="font-lora italic text-secondary text-base">
-          Discuss custom voice cloning pipelines, bespoke royalty smart contracts, and forensic provenance audits for your media production.
+        <p className="font-berthold text-slate-700 text-base">
+          Discuss custom voice cloning pipelines, bespoke royalty escrow agreements, and provenance audits for your media production.
         </p>
       </div>
 
@@ -95,7 +91,7 @@ export const ContactPage: React.FC = () => {
                 <h3 className="font-recoletta text-2xl font-bold text-on-surface">
                   Consultation Request Dispatched
                 </h3>
-                <p className="font-lora italic text-sm text-secondary max-w-sm mx-auto">
+                <p className="font-berthold text-sm text-slate-600 max-w-sm mx-auto">
                   An acoustic licensing partner will review your production requirements and respond within 4 business hours.
                 </p>
                 <Button variant="secondary" size="sm" onClick={() => setSubmitted(false)}>

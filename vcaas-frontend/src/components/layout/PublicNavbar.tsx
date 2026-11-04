@@ -4,7 +4,7 @@ import { Button } from '../ui/Button';
 import { BrandLogo } from '../ui/BrandLogo';
 import { useDomain } from '../../context/DomainContext';
 import { useAuth } from '../../context/AuthContext';
-import { ShieldCheck, Sparkles } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
 export const PublicNavbar: React.FC = () => {
   const location = useLocation();
@@ -23,7 +23,7 @@ export const PublicNavbar: React.FC = () => {
       <div className="max-w-container mx-auto px-6 h-20 flex items-center justify-between">
         {/* Brand & Wordmark */}
         <Link to="/" className="flex items-center gap-3 group">
-          <BrandLogo variant="dark" type="full" className="h-11 w-auto transition-transform group-hover:scale-[1.02]" alt="Whicoustic" />
+          <BrandLogo variant="dark" type="wordmark" className="h-7 w-auto transition-transform group-hover:scale-[1.02]" alt="Whicoustic" />
         </Link>
 
         {/* Navigation Items */}
@@ -55,7 +55,7 @@ export const PublicNavbar: React.FC = () => {
               icon={<ShieldCheck className="w-4 h-4 text-primary-container" />}
               onClick={() => navigateToSubdomain('/dashboard')}
             >
-              Open Console (Sub-domain)
+              Open Console
             </Button>
           ) : (
             <>
@@ -68,9 +68,8 @@ export const PublicNavbar: React.FC = () => {
                 <Button
                   variant="primary"
                   size="sm"
-                  icon={<Sparkles className="w-3.5 h-3.5" />}
                 >
-                  Start Onboarding
+                  Get started free
                 </Button>
               </Link>
             </>

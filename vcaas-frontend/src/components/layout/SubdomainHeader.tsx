@@ -1,6 +1,5 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
-import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { Bell, Search, ShieldCheck, Zap } from 'lucide-react';
 
@@ -35,18 +34,13 @@ export const SubdomainHeader: React.FC = () => {
         <h1 className="font-recoletta text-2xl font-bold text-on-surface tracking-tight">
           {getPageTitle(location.pathname)}
         </h1>
-        <p className="font-lora italic text-xs text-secondary">
-          Sub-domain Workspace • app.whicoustic.ai
+        <p className="font-berthold text-xs text-slate-500">
+          Console Workspace • app.whicoustic.ai
         </p>
       </div>
 
       {/* Header Actions */}
       <div className="flex items-center gap-4">
-        {/* Forensic Status Badge */}
-        <Badge variant="amber" size="sm" pulse icon={<ShieldCheck className="w-3.5 h-3.5 text-primary-container" />}>
-          Watermark Active: SHA-256
-        </Badge>
-
         {/* Quick Search */}
         <div className="relative hidden md:block">
           <Search className="w-4 h-4 text-secondary absolute left-3 top-1/2 -translate-y-1/2" />

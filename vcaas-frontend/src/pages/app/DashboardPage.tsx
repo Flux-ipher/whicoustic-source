@@ -1,7 +1,6 @@
 import React from 'react';
 import { StatCard } from '../../components/ui/StatCard';
 import { Card } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { WaveformVisualizer } from '../../components/ui/WaveformVisualizer';
 import { mockDashboardMetrics, mockRecentActivity, mockThroughputData } from '../../data/mock/dashboard';
@@ -67,13 +66,13 @@ export const DashboardPage: React.FC = () => {
                 <h3 className="font-recoletta text-xl font-bold text-on-surface">
                   Synthesis Request Throughput (24h)
                 </h3>
-                <p className="font-lora italic text-xs text-secondary">
+                <p className="font-berthold text-xs text-slate-600">
                   Concurrent phoneme rendering across distributed inference edge nodes
                 </p>
               </div>
-              <Badge variant="amber" size="sm" pulse>
+              <span className="text-xs font-code text-slate-500">
                 Live Feed (38ms TTFT)
-              </Badge>
+              </span>
             </div>
 
             <div className="h-64 w-full pt-4">
@@ -123,9 +122,9 @@ export const DashboardPage: React.FC = () => {
               <h4 className="font-recoletta text-base font-bold text-on-surface">
                 Acoustic Watermark
               </h4>
-              <Badge variant="amber" size="sm">
+              <span className="text-xs font-code text-primary-container font-semibold">
                 L3 Steganography
-              </Badge>
+              </span>
             </div>
 
             <div className="bg-surface-container p-3.5 rounded-card space-y-2">
@@ -171,9 +170,9 @@ export const DashboardPage: React.FC = () => {
                     <p className="text-secondary">{act.target}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Badge variant={act.badgeVariant} size="sm">
+                    <span className="text-xs font-medium text-slate-700">
                       {act.badge}
-                    </Badge>
+                    </span>
                     <span className="text-secondary/70 text-[11px] font-code">{act.time}</span>
                   </div>
                 </div>

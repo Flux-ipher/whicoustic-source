@@ -11,15 +11,11 @@ export const PublicFooter: React.FC = () => {
           {/* Brand Info */}
           <div className="md:col-span-2 space-y-4">
             <Link to="/" className="inline-block group">
-              <BrandLogo variant="dark" type="full" className="h-11 w-auto transition-transform group-hover:scale-[1.02]" alt="Whicoustic" />
+              <BrandLogo variant="dark" type="wordmark" className="h-8 w-auto transition-transform group-hover:scale-[1.02]" alt="Whicoustic" />
             </Link>
-            <p className="font-lora italic text-sm text-secondary max-w-sm leading-relaxed">
-              Forensic-grade neural voice synthesis and cryptographic licensing protocol for artists, global media studios, and enterprise applications.
+            <p className="font-berthold text-sm text-slate-600 max-w-sm leading-relaxed">
+              Verified neural voice synthesis and cryptographic licensing protocol for artists, media studios, and enterprise applications.
             </p>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-pill bg-surface-container border border-outline-subtle text-xs font-code text-secondary">
-              <Lock className="w-3.5 h-3.5 text-primary-container" />
-              <span>SHA-256 Acoustic Watermark Verified</span>
-            </div>
           </div>
 
           {/* Solutions */}

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
 import { Card } from '../../components/ui/Card';
 import { WaveformVisualizer } from '../../components/ui/WaveformVisualizer';
 import {
@@ -21,19 +20,12 @@ export const HomePage: React.FC = () => {
     <div className="space-y-24 pb-16">
       {/* 1. HERO SECTION */}
       <section className="relative pt-12 md:pt-20 px-6 max-w-container mx-auto">
-        <div className="text-center space-y-6 max-w-3xl mx-auto">
-          {/* Top Intelligence Pill */}
-          <div className="inline-flex items-center gap-2">
-            <Badge variant="amber" size="md" pulse icon={<Sparkles className="w-3.5 h-3.5 text-primary-container" />}>
-              Next-Gen Voice IP Infrastructure
-            </Badge>
-          </div>
-
-          {/* Main Headline (Recoleta) */}
-          <h1 className="font-recoletta text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight text-on-surface leading-[1.08]">
-            The Biometric Voice Protocol for{' '}
+        <div className="text-center space-y-6 max-w-4xl mx-auto">
+          {/* Main Headline (Recoleta) with balanced wrap and clear proposition */}
+          <h1 className="font-recoletta text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-on-surface leading-[1.12] [text-wrap:balance]">
+            AI Voice Licensing & Biometric Protection for{' '}
             <span className="text-primary-container relative inline-block">
-              Global Media
+              Creators & Studios
               <svg
                 className="absolute -bottom-2 left-0 w-full h-3 text-primary-container/30"
                 viewBox="0 0 100 12"
@@ -44,9 +36,9 @@ export const HomePage: React.FC = () => {
             </span>
           </h1>
 
-          {/* Subtitle (Lora Italic) */}
-          <p className="font-lora italic text-lg sm:text-xl text-secondary leading-relaxed max-w-2xl mx-auto">
-            Forensic-grade voice synthesis anchored with SHA-256 cryptographic watermarks. Protect your vocal identity, license your AI personas, and automate recurring royalties.
+          {/* Subtitle (Upright, high contrast dark slate, no italic) */}
+          <p className="font-berthold text-base sm:text-lg md:text-xl text-slate-700 leading-relaxed max-w-2xl mx-auto [text-wrap:balance]">
+            Create verified neural voice models with cryptographic watermarking. Protect your vocal identity from unauthorized replication, license to verified productions, and automate royalty payouts.
           </p>
 
           {/* Action CTAs */}
@@ -58,7 +50,7 @@ export const HomePage: React.FC = () => {
                 icon={<ArrowRight className="w-4 h-4" />}
                 iconPosition="right"
               >
-                Start Onboarding Free
+                Get started free
               </Button>
             </Link>
             <Link to="/demo">
@@ -68,19 +60,19 @@ export const HomePage: React.FC = () => {
             </Link>
           </div>
 
-          {/* Trust Highlights */}
-          <div className="pt-6 flex items-center justify-center gap-6 text-xs font-berthold text-secondary">
+          {/* Trust Highlights - Defensible, verified claims */}
+          <div className="pt-6 flex flex-wrap items-center justify-center gap-6 text-xs sm:text-sm font-berthold text-slate-700">
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Zero-Deepfake Guarantee</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span className="font-medium">Six-layer verification</span>
             </span>
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Automated Smart Contracts</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span className="font-medium">Automated licensing escrow</span>
             </span>
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>24-bit / 96kHz Fidelity</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span className="font-medium">Studio-calibrated 24 kHz synthesis</span>
             </span>
           </div>
         </div>
@@ -102,9 +94,6 @@ export const HomePage: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <Badge variant="amber" size="sm" pulse>
-                Forensic Watermark Embedded
-              </Badge>
             </div>
 
             {/* Dynamic Waveform Display */}
@@ -116,7 +105,7 @@ export const HomePage: React.FC = () => {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-outline-subtle text-xs font-berthold">
               <div>
                 <span className="text-secondary block">Sampling Frequency</span>
-                <span className="font-bold text-on-surface font-code">96,000 Hz</span>
+                <span className="font-bold text-on-surface font-code">24,000 Hz</span>
               </div>
               <div>
                 <span className="text-secondary block">Phoneme Match</span>
@@ -124,11 +113,11 @@ export const HomePage: React.FC = () => {
               </div>
               <div>
                 <span className="text-secondary block">Watermark Strength</span>
-                <span className="font-bold text-primary-container font-code">Forensic L3</span>
+                <span className="font-bold text-primary-container font-code">Cryptographic L3</span>
               </div>
               <div>
-                <span className="text-secondary block">Protocol Version</span>
-                <span className="font-bold text-on-surface font-code">v2.4-Synthesized</span>
+                <span className="text-secondary block">Synthesis Architecture</span>
+                <span className="font-bold text-on-surface font-code">XTTS-v2 Neural</span>
               </div>
             </div>
           </Card>
@@ -141,7 +130,7 @@ export const HomePage: React.FC = () => {
           <h2 className="font-recoletta text-3xl sm:text-4xl font-bold text-on-surface">
             Architected for Artists. Engineered for Studios.
           </h2>
-          <p className="font-lora italic text-secondary text-base">
+          <p className="font-berthold text-slate-700 text-base">
             A comprehensive infrastructure built to bridge the gap between autonomous AI synthesis and authentic voice rights ownership.
           </p>
         </div>
@@ -155,7 +144,7 @@ export const HomePage: React.FC = () => {
             <h3 className="font-recoletta text-2xl font-bold text-on-surface">
               Neural Synthesis Studio
             </h3>
-            <p className="font-berthold text-sm text-secondary leading-relaxed">
+            <p className="font-berthold text-sm text-slate-600 leading-relaxed">
               Clone voice personas with under 5 minutes of clean audio. Train multilingual models that retain vocal timber, emotional inflection, and natural breath cadence.
             </p>
             <ul className="space-y-2 text-xs font-berthold text-on-surface pt-2">
@@ -178,8 +167,8 @@ export const HomePage: React.FC = () => {
             <h3 className="font-recoletta text-2xl font-bold text-on-surface">
               Cryptographic Watermarking
             </h3>
-            <p className="font-berthold text-sm text-secondary leading-relaxed">
-              Imperceptible ultrasonic steganography binds every rendered second to a cryptographic hash. Deepfakes without your SHA-256 seal are flagged automatically.
+            <p className="font-berthold text-sm text-slate-600 leading-relaxed">
+              Imperceptible ultrasonic steganography binds every rendered second to a cryptographic hash. Clones generated outside your authorization are detected via 6-layer analysis.
             </p>
             <ul className="space-y-2 text-xs font-berthold text-on-surface pt-2">
               <li className="flex items-center gap-2">
@@ -201,8 +190,8 @@ export const HomePage: React.FC = () => {
             <h3 className="font-recoletta text-2xl font-bold text-on-surface">
               Automated Royalty Escrow
             </h3>
-            <p className="font-berthold text-sm text-secondary leading-relaxed">
-              Programmatic smart licensing contracts ensure you get paid per second of game play, film dialogue, or commercial broadcast without chasing accounts receivable.
+            <p className="font-berthold text-sm text-slate-600 leading-relaxed">
+              Programmatic licensing escrow ensures you get paid per second of game play, film dialogue, or commercial broadcast without chasing accounts receivable.
             </p>
             <ul className="space-y-2 text-xs font-berthold text-on-surface pt-2">
               <li className="flex items-center gap-2">
@@ -222,9 +211,6 @@ export const HomePage: React.FC = () => {
       <section className="bg-white border-y border-outline-subtle py-20">
         <div className="max-w-container mx-auto px-6">
           <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
-            <Badge variant="neutral" size="sm">
-              Operational Workflow
-            </Badge>
             <h2 className="font-recoletta text-3xl sm:text-4xl font-bold text-on-surface">
               From Microphone to Global Royalties in 3 Steps
             </h2>
@@ -281,13 +267,13 @@ export const HomePage: React.FC = () => {
             <h2 className="font-recoletta text-4xl md:text-5xl font-bold tracking-tight text-white">
               Ready to safeguard and monetize your voice?
             </h2>
-            <p className="font-lora italic text-secondary-fixed-dim text-base md:text-lg">
-              Join leading voice talent, Hollywood studios, and AI developers building on the verified voice protocol.
+            <p className="font-berthold text-slate-300 text-base md:text-lg">
+              Join voice talent, creators, and entertainment studios licensing synthetic audio with biometric verification.
             </p>
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link to="/signup">
                 <Button variant="primary" size="lg" icon={<Zap className="w-4 h-4" />}>
-                  Create Biometric Vault
+                  Get started free
                 </Button>
               </Link>
               <Link to="/contact">

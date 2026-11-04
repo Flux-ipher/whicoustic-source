@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Badge } from '../../components/ui/Badge';
 import { Card } from '../../components/ui/Card';
 import { Search, ChevronDown, ChevronUp, HelpCircle, ShieldAlert, Cpu, DollarSign } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -59,13 +58,10 @@ export const HelpPage: React.FC = () => {
     <div className="max-w-container mx-auto px-6 py-12 space-y-12">
       {/* Header */}
       <div className="max-w-3xl mx-auto text-center space-y-4">
-        <Badge variant="neutral" size="sm" icon={<HelpCircle className="w-3.5 h-3.5 text-primary-container" />}>
-          Knowledge Center & FAQs
-        </Badge>
         <h1 className="font-recoletta text-4xl sm:text-5xl font-bold text-on-surface">
           Frequently Asked Questions
         </h1>
-        <p className="font-lora italic text-secondary text-base">
+        <p className="font-berthold text-slate-700 text-base">
           Everything you need to know about biometric voice cloning, cryptographic provenance, and automated royalty licensing.
         </p>
 
@@ -154,8 +150,8 @@ export const HelpPage: React.FC = () => {
         <h3 className="font-recoletta text-xl font-bold text-on-surface">
           Have an enterprise security question?
         </h3>
-        <p className="font-lora italic text-xs text-secondary">
-          Our forensic acoustic engineers and IP licensing counsel are available for technical consultations.
+        <p className="font-berthold text-xs text-slate-600">
+          Our acoustic engineers and IP licensing counsel are available for technical consultations.
         </p>
         <div className="pt-2">
           <Link to="/contact">

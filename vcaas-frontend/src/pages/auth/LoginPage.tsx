@@ -29,7 +29,7 @@ export const LoginPage: React.FC = () => {
           Console Login
         </h2>
         <p className="font-lora italic text-xs text-secondary">
-          Enter your credentials to access the platform sub-domain (app.vcaas.ai).
+          Enter your credentials to access the platform sub-domain (app.whicoustic.ai).
         </p>
       </div>
 

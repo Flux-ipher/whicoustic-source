@@ -1,19 +1,15 @@
 import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
-import { Activity, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { BrandLogo } from '../ui/BrandLogo';
+import { ShieldCheck, ArrowLeft } from 'lucide-react';
 
 export const OnboardingLayout: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#F8F9FF] text-on-surface flex flex-col">
       {/* Top Header */}
       <header className="h-16 px-8 flex items-center justify-between border-b border-outline-subtle bg-white">
-        <Link to="/" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-[#0B1C30] flex items-center justify-center text-primary-container">
-            <Activity className="w-4 h-4 text-primary-container" />
-          </div>
-          <span className="font-recoletta text-xl font-bold text-on-surface">
-            VCaaS
-          </span>
+        <Link to="/" className="inline-block group">
+          <BrandLogo variant="dark" type="wordmark" className="h-8 w-auto transition-transform group-hover:scale-[1.02]" alt="Whicoustic" />
         </Link>
 
         <div className="flex items-center gap-3 text-xs font-berthold text-secondary">

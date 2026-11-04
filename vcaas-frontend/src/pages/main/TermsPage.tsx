@@ -51,7 +51,7 @@ export const TermsPage: React.FC = () => {
                 1. Sovereign Voice Ownership
               </h3>
               <p>
-                By enrolling in the VCaaS Platform, the Voice Artist or verified rights holder retains 100% indisputable biometric intellectual property ownership over their acoustic timbre, resonance patterns, and phonemic models. VCaaS acts solely as a non-exclusive cryptographic licensing facilitator and custodian of synthetic neural weights.
+                By enrolling in the Whicoustic Platform, the Voice Artist or verified rights holder retains 100% indisputable biometric intellectual property ownership over their acoustic timbre, resonance patterns, and phonemic models. Whicoustic acts solely as a non-exclusive cryptographic licensing facilitator and custodian of synthetic neural weights.
               </p>
             </section>
 

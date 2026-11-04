@@ -15,12 +15,12 @@ const faqs: FAQ[] = [
   {
     category: 'Watermarking & Security',
     q: 'How does ultrasonic cryptographic watermarking prevent unauthorized deepfakes?',
-    a: 'VCaaS embeds an imperceptible, lossless cryptographic payload (SHA-256 hash) directly into the acoustic frequency matrix of synthesized audio. If an unauthorized entity broadcasts audio claiming to be you, automated web sniffers and forensic scanners analyze the stream for your unique acoustic key.',
+    a: 'Whicoustic embeds an imperceptible, lossless cryptographic payload (SHA-256 hash) directly into the acoustic frequency matrix of synthesized audio. If an unauthorized entity broadcasts audio claiming to be you, automated web sniffers and forensic scanners analyze the stream for your unique acoustic key.',
   },
   {
     category: 'Watermarking & Security',
     q: 'Can third-party compression (MP3, YouTube, TikTok) erase the watermark?',
-    a: 'No. The VCaaS steganographic algorithm is trained against heavy psychoacoustic compression, bandpass filtering, and ambient background noise. The watermark survives standard broadcast codecs and downsampling.',
+    a: 'No. The Whicoustic steganographic algorithm is trained against heavy psychoacoustic compression, bandpass filtering, and ambient background noise. The watermark survives standard broadcast codecs and downsampling.',
   },
   {
     category: 'Licensing & Royalties',
@@ -39,8 +39,8 @@ const faqs: FAQ[] = [
   },
   {
     category: 'Platform Architecture',
-    q: 'Why does the platform console live on the app.vcaas.ai sub-domain?',
-    a: 'For enterprise-grade security isolation. The public marketing website (vcaas.com) and the authenticated platform console (app.vcaas.com) operate with isolated cookie scopes and strict CORS policies to protect your biometric vault keys.',
+    q: 'Why does the platform console live on the app.whicoustic.ai sub-domain?',
+    a: 'For enterprise-grade security isolation. The public marketing website (whicoustic.ai) and the authenticated platform console (app.whicoustic.ai) operate with isolated cookie scopes and strict CORS policies to protect your biometric vault keys.',
   },
 ];
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { BrandLogo } from '../ui/BrandLogo';
 import { useAuth } from '../../context/AuthContext';
 import { useDomain } from '../../context/DomainContext';
 import {
@@ -11,7 +12,6 @@ import {
   PieChart,
   ShieldAlert,
   LogOut,
-  Activity,
   Globe,
   Sparkles,
 } from 'lucide-react';
@@ -35,23 +35,11 @@ export const SubdomainSidebar: React.FC = () => {
       <div>
         {/* Brand Header */}
         <div className="h-20 px-6 flex items-center justify-between border-b border-outline-subtle">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-[#0B1C30] flex items-center justify-center text-primary-container shadow-sm">
-              <Activity className="w-5 h-5 text-primary-container" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-recoletta text-xl font-bold tracking-tight text-on-surface">
-                  VCaaS
-                </span>
-                <span className="text-[10px] font-code font-bold bg-[#FEF3C7] text-[#92400E] px-1.5 py-0.5 rounded-pill border border-[#FDE68A]">
-                  CONSOLE
-                </span>
-              </div>
-              <p className="font-lora italic text-[11px] text-secondary">
-                app.vcaas.ai
-              </p>
-            </div>
+          <div className="flex items-center gap-2.5">
+            <BrandLogo variant="dark" type="wordmark" className="h-7 w-auto" alt="Whicoustic" />
+            <span className="text-[10px] font-code font-bold bg-[#FEF3C7] text-[#92400E] px-1.5 py-0.5 rounded-pill border border-[#FDE68A]">
+              CONSOLE
+            </span>
           </div>
         </div>
 
@@ -124,7 +112,7 @@ export const SubdomainSidebar: React.FC = () => {
           className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-pill text-xs font-berthold text-secondary hover:text-on-surface hover:bg-white border border-outline-subtle transition-colors"
         >
           <Globe className="w-3.5 h-3.5 text-primary-container" />
-          <span>Exit to Main Domain (vcaas.com)</span>
+          <span>Exit to Main Domain (whicoustic.ai)</span>
         </button>
 
         {/* Logout */}

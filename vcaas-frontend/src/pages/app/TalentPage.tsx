@@ -81,7 +81,7 @@ export const TalentPage: React.FC = () => {
               Featured Voice Demo Reels
             </h3>
             <p className="font-lora italic text-xs text-secondary">
-              Published on the main domain Voice IP Marketplace (vcaas.com/marketplace)
+              Published on the main domain Voice IP Marketplace (whicoustic.ai/marketplace)
             </p>
           </div>
           <Button variant="primary" size="sm" icon={<Plus className="w-3.5 h-3.5" />}>

@@ -24,7 +24,7 @@ export const SubdomainHeader: React.FC = () => {
       case '/settings':
         return 'Cryptographic Security & API Keys';
       default:
-        return 'VCaaS Console';
+        return 'Whicoustic Console';
     }
   };
 
@@ -36,7 +36,7 @@ export const SubdomainHeader: React.FC = () => {
           {getPageTitle(location.pathname)}
         </h1>
         <p className="font-lora italic text-xs text-secondary">
-          Sub-domain Workspace • app.vcaas.ai
+          Sub-domain Workspace • app.whicoustic.ai
         </p>
       </div>
 

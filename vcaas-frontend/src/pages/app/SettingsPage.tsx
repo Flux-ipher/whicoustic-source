@@ -10,7 +10,7 @@ export const SettingsPage: React.FC = () => {
   const [copiedSha, setCopiedSha] = useState(false);
   const [twoFactorActive, setTwoFactorActive] = useState(true);
 
-  const apiKey = 'vcaas_live_891f7a02c99b24e6371da05178419';
+  const apiKey = 'whicoustic_live_891f7a02c99b24e6371da05178419';
   const sha256Key = '4080c0aea1ea4cc3a63a13901af1baaa76da6e81e2804561b6fff5d5f6d917c0';
 
   const handleCopyKey = () => {
@@ -82,7 +82,7 @@ export const SettingsPage: React.FC = () => {
         </div>
 
         <p className="text-xs font-berthold text-secondary leading-relaxed">
-          Use this secret key in enterprise backend pipelines to request real-time speech synthesis at <code className="font-code text-primary-container">https://api.vcaas.ai/v1/synthesize</code>.
+          Use this secret key in enterprise backend pipelines to request real-time speech synthesis at <code className="font-code text-primary-container">https://api.whicoustic.ai/v1/synthesize</code>.
         </p>
 
         <div className="flex items-center gap-3 p-3 bg-surface-container rounded-card border border-outline-subtle">

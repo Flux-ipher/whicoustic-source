@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, ShieldCheck, Lock, Heart } from 'lucide-react';
+import { BrandLogo } from '../ui/BrandLogo';
+import { ShieldCheck, Lock, Heart } from 'lucide-react';
 
 export const PublicFooter: React.FC = () => {
   return (
@@ -9,14 +10,9 @@ export const PublicFooter: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-5 gap-10 pb-12 border-b border-outline-subtle">
           {/* Brand Info */}
           <div className="md:col-span-2 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-[#0B1C30] flex items-center justify-center text-primary-container">
-                <Activity className="w-4 h-4 text-primary-container" />
-              </div>
-              <span className="font-recoletta text-2xl font-bold tracking-tight text-on-surface">
-                VCaaS
-              </span>
-            </div>
+            <Link to="/" className="inline-block group">
+              <BrandLogo variant="dark" type="full" className="h-11 w-auto transition-transform group-hover:scale-[1.02]" alt="Whicoustic" />
+            </Link>
             <p className="font-lora italic text-sm text-secondary max-w-sm leading-relaxed">
               Forensic-grade neural voice synthesis and cryptographic licensing protocol for artists, global media studios, and enterprise applications.
             </p>
@@ -103,7 +99,7 @@ export const PublicFooter: React.FC = () => {
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs font-berthold text-secondary gap-4">
           <div className="flex items-center gap-1.5">
-            <span>© {new Date().getFullYear()} VCaaS Infrastructure Corp. Built with</span>
+            <span>© {new Date().getFullYear()} Whicoustic Platform Corp. Built with</span>
             <Heart className="w-3.5 h-3.5 text-primary-container fill-primary-container" />
             <span>for Voice Rights Holders.</span>
           </div>

@@ -62,7 +62,7 @@ export const ContactPage: React.FC = () => {
                 </div>
                 <div>
                   <span className="font-bold text-on-surface block">Enterprise Licensing</span>
-                  <span className="text-secondary font-code">licensing@vcaas.ai</span>
+                  <span className="text-secondary font-code">licensing@whicoustic.ai</span>
                 </div>
               </div>
 

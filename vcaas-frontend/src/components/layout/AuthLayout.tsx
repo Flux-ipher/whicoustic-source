@@ -1,7 +1,8 @@
 import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
+import { BrandLogo } from '../ui/BrandLogo';
 import { WaveformVisualizer } from '../ui/WaveformVisualizer';
-import { Activity, ShieldCheck, Lock, Sparkles } from 'lucide-react';
+import { ShieldCheck, Lock, Sparkles } from 'lucide-react';
 
 export const AuthLayout: React.FC = () => {
   return (
@@ -14,13 +15,8 @@ export const AuthLayout: React.FC = () => {
 
           {/* Top Logo */}
           <div className="relative z-10">
-            <Link to="/" className="inline-flex items-center gap-3 group">
-              <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-primary-container border border-white/10 group-hover:scale-105 transition-transform">
-                <Activity className="w-5 h-5 text-primary-container" />
-              </div>
-              <span className="font-recoletta text-2xl font-bold tracking-tight text-white">
-                VCaaS
-              </span>
+            <Link to="/" className="inline-block group">
+              <BrandLogo variant="white" type="full" className="h-11 w-auto transition-transform group-hover:scale-[1.02]" alt="Whicoustic" />
             </Link>
           </div>
 

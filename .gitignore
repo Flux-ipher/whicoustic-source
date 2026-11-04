@@ -34,3 +34,10 @@ Thumbs.db
 # IDE & Editor files
 .vscode/
 .idea/
+
+# Scratch & Caches
+.scratch/
+/.scratch/
+.npm-cache/
+.npm-global/
+

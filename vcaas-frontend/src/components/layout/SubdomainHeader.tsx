@@ -29,7 +29,7 @@ export const SubdomainHeader: React.FC = () => {
   };
 
   return (
-    <header className="h-20 bg-white/90 backdrop-blur-md border-b border-outline-subtle px-8 flex items-center justify-between sticky top-7 z-20">
+    <header className="h-20 bg-white/90 backdrop-blur-md border-b border-outline-subtle px-8 flex items-center justify-between sticky top-0 z-20">
       {/* Title & Path */}
       <div>
         <h1 className="font-recoletta text-2xl font-bold text-on-surface tracking-tight">

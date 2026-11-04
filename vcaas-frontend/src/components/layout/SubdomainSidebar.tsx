@@ -35,7 +35,7 @@ export const SubdomainSidebar: React.FC = () => {
       <div>
         {/* Brand Header */}
         <div className="h-20 px-6 flex items-center justify-between border-b border-outline-subtle">
-          <BrandLogo variant="dark" type="wordmark" className="h-7 w-auto" alt="Whicoustic" />
+          <BrandLogo variant="dark" type="full" className="h-8 w-auto" alt="Whicoustic" />
         </div>
 
         {/* Navigation Items */}

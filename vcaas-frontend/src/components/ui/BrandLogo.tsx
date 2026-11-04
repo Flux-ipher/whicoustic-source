@@ -2,34 +2,36 @@ import React from 'react';
 
 export interface BrandLogoProps {
   variant?: 'dark' | 'white' | 'amber';
-  type?: 'wordmark' | 'full' | 'icon' | 'badge';
+  type?: 'full' | 'wordmark' | 'icon' | 'badge' | 'stacked';
   className?: string;
   alt?: string;
 }
 
 export const BrandLogo: React.FC<BrandLogoProps> = ({
   variant = 'dark',
-  type = 'wordmark',
+  type = 'full',
   className = 'h-8 w-auto',
   alt = 'Whicoustic Logo',
 }) => {
-  let src = '/brand/whicoustic-wordmark.svg';
+  let src = '/brand/whicoustic-full-dark.svg';
 
   if (type === 'icon') {
     src = '/brand/whicoustic-icon.svg';
   } else if (type === 'badge') {
     src = '/brand/whicoustic-badge.svg';
-  } else if (type === 'full') {
+  } else if (type === 'stacked') {
+    src = '/brand/whicoustic-stacked.svg';
+  } else if (type === 'wordmark') {
+    src = variant === 'white'
+      ? '/brand/whicoustic-wordmark-white.svg'
+      : '/brand/whicoustic-wordmark.svg';
+  } else {
+    // full horizontal logo
     src = variant === 'white' 
       ? '/brand/whicoustic-full-white.svg' 
       : variant === 'amber'
       ? '/brand/whicoustic-full-amber.svg'
       : '/brand/whicoustic-full-dark.svg';
-  } else {
-    // wordmark
-    src = variant === 'white'
-      ? '/brand/whicoustic-wordmark-white.svg'
-      : '/brand/whicoustic-wordmark.svg';
   }
 
   return (

@@ -11,7 +11,7 @@ export const PublicFooter: React.FC = () => {
           {/* Brand Info */}
           <div className="md:col-span-2 space-y-4">
             <Link to="/" className="inline-block group">
-              <BrandLogo variant="dark" type="wordmark" className="h-8 w-auto transition-transform group-hover:scale-[1.02]" alt="Whicoustic" />
+              <BrandLogo variant="dark" type="full" className="h-8 w-auto transition-transform group-hover:scale-[1.02]" alt="Whicoustic" />
             </Link>
             <p className="font-berthold text-sm text-slate-600 max-w-sm leading-relaxed">
               Verified neural voice synthesis and cryptographic licensing protocol for artists, media studios, and enterprise applications.

@@ -17,7 +17,7 @@ export const AuthLayout: React.FC = () => {
           {/* Top Logo */}
           <div className="relative z-10">
             <Link to="/" className="inline-block group">
-              <BrandLogo variant="white" type="wordmark" className="h-8 w-auto transition-transform group-hover:scale-[1.02]" alt="Whicoustic" />
+              <BrandLogo variant="white" type="full" className="h-8 w-auto transition-transform group-hover:scale-[1.02]" alt="Whicoustic" />
             </Link>
           </div>
 

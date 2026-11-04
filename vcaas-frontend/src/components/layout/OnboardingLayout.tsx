@@ -9,7 +9,7 @@ export const OnboardingLayout: React.FC = () => {
       {/* Top Header */}
       <header className="h-16 px-8 flex items-center justify-between border-b border-outline-subtle bg-white">
         <Link to="/" className="inline-block group">
-          <BrandLogo variant="dark" type="wordmark" className="h-8 w-auto transition-transform group-hover:scale-[1.02]" alt="Whicoustic" />
+          <BrandLogo variant="dark" type="full" className="h-8 w-auto transition-transform group-hover:scale-[1.02]" alt="Whicoustic" />
         </Link>
 
         <div className="flex items-center gap-3 text-xs font-berthold text-secondary">

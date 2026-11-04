@@ -23,7 +23,7 @@ export const PublicNavbar: React.FC = () => {
       <div className="max-w-container mx-auto px-6 h-20 flex items-center justify-between">
         {/* Brand & Wordmark */}
         <Link to="/" className="flex items-center gap-3 group">
-          <BrandLogo variant="dark" type="wordmark" className="h-7 w-auto transition-transform group-hover:scale-[1.02]" alt="Whicoustic" />
+          <BrandLogo variant="dark" type="full" className="h-8 w-auto transition-transform group-hover:scale-[1.02]" alt="Whicoustic" />
         </Link>
 
         {/* Navigation Items */}

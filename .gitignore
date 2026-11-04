@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Production builds
+dist/
+**/dist/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
+
+#md files
+*.md
+!rules.md
+!Project context.md
+
+#docs
+*.docs
+
+#env files
+.env
+.env.production
+.env.development
+
+#package-lock.json
+package-lock.json

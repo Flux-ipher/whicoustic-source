@@ -16,18 +16,20 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
-#md files
+# Private development documentation & rules (NEVER commit to GitHub)
 *.md
-!rules.md
-!Project context.md
-
-#docs
+**/*.md
 *.docs
+**/*.docs
+*.zip
+.agents/
+.agent/
 
-#env files
+# Secrets & Environment variables
 .env
-.env.production
-.env.development
+.env.*
+*.env
 
-#package-lock.json
-package-lock.json
+# IDE & Editor files
+.vscode/
+.idea/

@@ -135,3 +135,4 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
     </motion.div>
   );
 };
+

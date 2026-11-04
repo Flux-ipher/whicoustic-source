@@ -68,3 +68,4 @@ export const NotFoundPage: React.FC = () => {
     </PageTransition>
   );
 };
+

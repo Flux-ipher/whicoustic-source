@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { BrandLogo } from '../ui/BrandLogo';
-import { ShieldCheck, Lock, Heart } from 'lucide-react';
+import { ShieldCheck, Heart } from 'lucide-react';
 
 export const PublicFooter: React.FC = () => {
   return (

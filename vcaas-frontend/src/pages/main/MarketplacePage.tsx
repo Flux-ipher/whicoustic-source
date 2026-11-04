@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { mockMarketplaceVoices, VoiceTalent } from '../../data/mock/marketplace';
+import { motion } from 'framer-motion';
+import { mockMarketplaceVoices } from '../../data/mock/marketplace';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { WaveformVisualizer } from '../../components/ui/WaveformVisualizer';

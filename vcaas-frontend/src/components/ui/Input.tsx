@@ -11,7 +11,10 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ label, helperText, error, leftIcon, rightIcon, className, id, ...props }, ref) => {
-    const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+    const generatedId = React.useId();
+    const inputId = id || (label ? `${label.toLowerCase().replace(/\s+/g, '-')}-${generatedId}` : generatedId);
+    const helperId = `${inputId}-helper`;
+    const errorId = `${inputId}-error`;
 
     return (
       <div className="w-full text-left">
@@ -32,6 +35,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             id={inputId}
+            aria-invalid={!!error}
+            aria-describedby={error ? errorId : helperText ? helperId : undefined}
             className={clsx(
               'w-full h-11 px-3.5 bg-white font-berthold text-sm text-on-surface rounded-input border transition-all duration-150',
               'placeholder:text-secondary/60 placeholder:font-normal',
@@ -52,9 +57,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           )}
         </div>
         {error ? (
-          <p className="mt-1 text-xs text-error font-berthold">{error}</p>
+          <p id={errorId} className="mt-1 text-xs text-error font-berthold">{error}</p>
         ) : helperText ? (
-          <p className="mt-1 text-xs text-secondary font-berthold">{helperText}</p>
+          <p id={helperId} className="mt-1 text-xs text-secondary font-berthold">{helperText}</p>
         ) : null}
       </div>
     );

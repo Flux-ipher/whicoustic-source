@@ -17,7 +17,7 @@ export const PrivacyPage: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
         {/* Table of Contents & Biometric Vault Sidebar */}
-        <div className="lg:col-span-4 hidden lg:block sticky top-24 self-start space-y-6">
+        <div className="lg:col-span-4 hidden lg:block space-y-6">
           <div className="space-y-2 p-5 bg-white rounded-card border border-outline-subtle text-xs font-berthold shadow-sm">
             <span className="text-secondary uppercase tracking-wider font-bold block mb-2">
               Governance Sections

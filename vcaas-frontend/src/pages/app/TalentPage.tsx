@@ -5,7 +5,7 @@ import { WaveformVisualizer } from '../../components/ui/WaveformVisualizer';
 import { PageTransition } from '../../components/ui/PageTransition';
 import { TalentVoiceIllustration } from '../../components/ui/Illustrations';
 import { useAuth } from '../../context/AuthContext';
-import { ShieldCheck, Play, Pause, Edit3, Plus, Globe, Sparkles } from 'lucide-react';
+import { ShieldCheck, Play, Pause, Edit3, Plus } from 'lucide-react';
 
 export const TalentPage: React.FC = () => {
   const { user } = useAuth();
@@ -107,7 +107,8 @@ export const TalentPage: React.FC = () => {
                 <div className="flex items-center gap-4 w-full sm:w-1/3">
                   <button
                     onClick={() => setPlayingId(isPlaying ? null : sample.id)}
-                    className="w-10 h-10 rounded-full bg-primary-container text-white flex items-center justify-center shadow-amber-glow hover:bg-primary-hover shrink-0"
+                    aria-label={isPlaying ? 'Pause sample' : 'Play sample'}
+                    className="w-10 h-10 rounded-full bg-primary-container text-[#0B1C30] flex items-center justify-center shadow-amber-glow hover:bg-primary-hover shrink-0"
                   >
                     {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
                   </button>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './Button';
-import { Mic, X, ExternalLink, CheckCircle2, Shield, Settings } from 'lucide-react';
+import { Mic, X } from 'lucide-react';
 
 interface TroubleshooterProps {
   isOpen: boolean;
@@ -36,6 +36,9 @@ export const MicrophoneTroubleshooterModal: React.FC<TroubleshooterProps> = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 16 }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mic-troubleshooter-title"
           className="relative z-10 w-full max-w-xl bg-white rounded-card-lg border border-outline-subtle shadow-2xl overflow-hidden p-6 sm:p-8 space-y-6"
         >
           {/* Header */}
@@ -45,7 +48,7 @@ export const MicrophoneTroubleshooterModal: React.FC<TroubleshooterProps> = ({
                 <Mic className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-recoletta text-xl font-bold text-on-surface">
+                <h3 id="mic-troubleshooter-title" className="font-recoletta text-xl font-bold text-on-surface">
                   Microphone Permission Guide
                 </h3>
                 <p className="font-berthold text-xs text-slate-500">

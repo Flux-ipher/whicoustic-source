@@ -52,7 +52,7 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({
                 className={clsx(
                   'w-9 h-9 rounded-full flex items-center justify-center font-berthold font-semibold text-xs transition-all duration-200 border-2',
                   isCompleted
-                    ? 'bg-primary-container text-white border-primary-container shadow-amber-glow'
+                    ? 'bg-primary-container text-[#0B1C30] border-primary-container shadow-amber-glow'
                     : isCurrent
                     ? 'bg-white text-primary-container border-primary-container ring-4 ring-primary-container/20 shadow-md scale-105'
                     : 'bg-white text-secondary border-outline-subtle'

@@ -56,7 +56,8 @@ export const DomainProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const navigateToSubdomain = (path: string = '/dashboard') => {
     const configuredSubdomain = import.meta.env.VITE_APP_SUBDOMAIN;
-    const protocol = import.meta.env.VITE_PROTOCOL || window.location.protocol;
+    const rawProtocol = (import.meta.env.VITE_PROTOCOL as string) || window.location.protocol;
+    const protocol = rawProtocol.endsWith(':') ? rawProtocol : `${rawProtocol}:`;
     const hostname = window.location.hostname;
     const port = window.location.port ? `:${window.location.port}` : '';
 
@@ -78,7 +79,8 @@ export const DomainProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const navigateToMainDomain = (path: string = '/') => {
     const configuredMain = import.meta.env.VITE_MAIN_DOMAIN;
-    const protocol = import.meta.env.VITE_PROTOCOL || window.location.protocol;
+    const rawProtocol = (import.meta.env.VITE_PROTOCOL as string) || window.location.protocol;
+    const protocol = rawProtocol.endsWith(':') ? rawProtocol : `${rawProtocol}:`;
     const hostname = window.location.hostname;
     const port = window.location.port ? `:${window.location.port}` : '';
 

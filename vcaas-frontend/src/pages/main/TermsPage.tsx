@@ -1,6 +1,5 @@
 import React from 'react';
 import { Card } from '../../components/ui/Card';
-import { ShieldCheck, Lock, FileText } from 'lucide-react';
 import { PageTransition } from '../../components/ui/PageTransition';
 import { LegalComplianceIllustration } from '../../components/ui/Illustrations';
 
@@ -18,7 +17,7 @@ export const TermsPage: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
         {/* Table of Contents & Compliance Sidebar */}
-        <div className="lg:col-span-4 hidden lg:block sticky top-24 self-start space-y-6">
+        <div className="lg:col-span-4 hidden lg:block space-y-6">
           <div className="space-y-2 p-5 bg-white rounded-card border border-outline-subtle text-xs font-berthold shadow-sm">
             <span className="text-secondary uppercase tracking-wider font-bold block mb-2">
               Protocol Sections

@@ -117,6 +117,10 @@ export const SettingsPage: React.FC = () => {
             </p>
           </div>
           <button
+            type="button"
+            role="switch"
+            aria-checked={twoFactorActive}
+            aria-label="Hardware & Biometric 2FA toggle"
             onClick={() => setTwoFactorActive(!twoFactorActive)}
             className={`w-12 h-6 rounded-full transition-colors relative p-0.5 ${
               twoFactorActive ? 'bg-primary-container' : 'bg-outline-border'

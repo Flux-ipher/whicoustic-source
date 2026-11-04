@@ -52,7 +52,7 @@ export const SubdomainSidebar: React.FC = () => {
                 className={({ isActive }) =>
                   `flex items-center justify-between px-3.5 py-2.5 rounded-pill text-sm font-berthold transition-all duration-150 ${
                     isActive
-                      ? 'bg-primary-container text-white font-semibold shadow-amber-glow'
+                      ? 'bg-primary-container text-[#0B1C30] font-semibold shadow-amber-glow'
                       : 'text-on-surface/80 hover:bg-surface-container-high hover:text-on-surface'
                   }`
                 }
@@ -60,14 +60,14 @@ export const SubdomainSidebar: React.FC = () => {
                 {({ isActive }) => (
                   <>
                     <div className="flex items-center gap-3">
-                      <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-secondary'}`} />
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-[#0B1C30]' : 'text-secondary'}`} />
                       <span>{item.label}</span>
                     </div>
                     {item.badge && (
                       <span
                         className={`text-[10px] font-code font-bold px-1.5 py-0.5 rounded-pill ${
                           isActive
-                            ? 'bg-white text-primary-container'
+                            ? 'bg-[#0B1C30] text-white'
                             : 'bg-[#FEF3C7] text-[#92400E]'
                         }`}
                       >

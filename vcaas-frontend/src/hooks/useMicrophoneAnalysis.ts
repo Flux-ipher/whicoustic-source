@@ -90,6 +90,11 @@ export function useMicrophoneAnalysis() {
   const [decibels, setDecibels] = useState(-60);
   const [frequencyData, setFrequencyData] = useState<number[]>(new Array(32).fill(10));
   const [simulationMode, setSimulationMode] = useState<'AUTO' | 'HUMAN' | 'AI_ATTACK'>('AUTO');
+  const simulationModeRef = useRef(simulationMode);
+
+  useEffect(() => {
+    simulationModeRef.current = simulationMode;
+  }, [simulationMode]);
 
   const [analysisResult, setAnalysisResult] = useState<VoiceAnalysisResult>({
     verdict: 'HUMAN',
@@ -192,7 +197,7 @@ export function useMicrophoneAnalysis() {
 
     // Simulate 6-layer defense response:
     setAnalysisResult((prev) => {
-      const isAiAttack = simulationMode === 'AI_ATTACK';
+      const isAiAttack = simulationModeRef.current === 'AI_ATTACK';
 
       if (isAiAttack) {
         // AI Attack detected: Multiple layer failures

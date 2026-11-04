@@ -12,10 +12,7 @@ import {
 } from '../../components/ui/Illustrations';
 import {
   Mic,
-  ShieldCheck,
-  Coins,
   ArrowRight,
-  Lock,
   Play,
   CheckCircle2,
   Zap,

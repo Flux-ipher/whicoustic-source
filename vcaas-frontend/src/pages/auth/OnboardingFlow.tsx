@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
@@ -29,6 +29,16 @@ export const OnboardingFlow: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingProgress, setRecordingProgress] = useState(0);
   const [showTroubleshooter, setShowTroubleshooter] = useState(false);
+  const calibrationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Clear timer on unmount
+  useEffect(() => {
+    return () => {
+      if (calibrationTimerRef.current) {
+        clearInterval(calibrationTimerRef.current);
+      }
+    };
+  }, []);
 
   const steps: Step[] = [
     { id: 1, title: 'Voice Persona & Role' },
@@ -38,12 +48,18 @@ export const OnboardingFlow: React.FC = () => {
 
   // Step 2 recording simulator
   const handleStartCalibration = () => {
+    if (calibrationTimerRef.current) {
+      clearInterval(calibrationTimerRef.current);
+    }
     setIsRecording(true);
     setRecordingProgress(0);
-    const interval = setInterval(() => {
+    calibrationTimerRef.current = setInterval(() => {
       setRecordingProgress((prev) => {
         if (prev >= 100) {
-          clearInterval(interval);
+          if (calibrationTimerRef.current) {
+            clearInterval(calibrationTimerRef.current);
+            calibrationTimerRef.current = null;
+          }
           setIsRecording(false);
           updateOnboardingData({ acousticAnchorRecorded: true });
           return 100;
@@ -224,6 +240,7 @@ export const OnboardingFlow: React.FC = () => {
                 variant="primary"
                 size="md"
                 onClick={() => setCurrentStep(3)}
+                disabled={!onboardingData.acousticAnchorRecorded || isRecording}
                 icon={<ArrowRight className="w-4 h-4" />}
                 iconPosition="right"
               >

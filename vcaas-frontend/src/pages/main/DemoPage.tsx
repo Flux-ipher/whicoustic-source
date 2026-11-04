@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mic,
   MicOff,
-  Radio,
   ShieldCheck,
   ShieldAlert,
   Activity,
@@ -16,12 +15,10 @@ import {
   WifiOff,
   Sparkles,
   RefreshCw,
-  HelpCircle,
   Play,
-  RotateCcw,
 } from 'lucide-react';
 import { ErrorState } from '../../components/ui/ErrorState';
-import { MicBlockedIllustration, ConnectionLostIllustration } from '../../components/ui/Illustrations';
+import { MicBlockedIllustration } from '../../components/ui/Illustrations';
 import { MicrophoneTroubleshooterModal } from '../../components/ui/MicrophoneTroubleshooterModal';
 import { PageTransition } from '../../components/ui/PageTransition';
 import { Button } from '../../components/ui/Button';
@@ -53,7 +50,8 @@ export interface Verdict {
 
 /* ─── Helpers ────────────────────────────────────────────────── */
 const API_BASE = (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8000';
-const WS_URL = API_BASE.replace(/\/$/, '').replace(/^https?/, (protocol) => protocol === 'https' ? 'wss' : 'ws') + '/api/v1/verify/stream';
+const cleanBase = API_BASE.replace(/\/api\/v1\/?$/, '').replace(/\/$/, '');
+const WS_URL = cleanBase.replace(/^https?/, (protocol) => protocol === 'https' ? 'wss' : 'ws') + '/api/v1/verify/stream';
 
 function scoreColor(score: number): string {
   if (score >= 0.7) return 'var(--success)';
@@ -322,8 +320,14 @@ export const DemoPage: React.FC = () => {
   const [showMicModal, setShowMicModal] = useState(false);
   const [volumeLevel, setVolumeLevel] = useState<number>(0);
   const [simulationMode, setSimulationMode] = useState<'HUMAN' | 'AI_ATTACK'>('HUMAN');
+  const simulationModeRef = useRef(simulationMode);
+
+  useEffect(() => {
+    simulationModeRef.current = simulationMode;
+  }, [simulationMode]);
 
   const wsRef = useRef<WebSocket | null>(null);
+  const wsConnectedRef = useRef(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
@@ -335,6 +339,7 @@ export const DemoPage: React.FC = () => {
   const tickCountRef = useRef<number>(0);
 
   const teardown = useCallback(() => {
+    wsConnectedRef.current = false;
     if (animFrameRef.current) {
       cancelAnimationFrame(animFrameRef.current);
       animFrameRef.current = null;
@@ -376,6 +381,25 @@ export const DemoPage: React.FC = () => {
   /* Clean up on unmount */
   useEffect(() => () => { teardown(); }, [teardown]);
 
+  /* Start periodic continuous analysis in preview / local engine mode */
+  const startLocalAnalysisLoop = useCallback(() => {
+    if (simTimerRef.current) clearInterval(simTimerRef.current);
+
+    // Initial instant verdict
+    tickCountRef.current += 1;
+    const initialVerdict = generateSimulatedVerdict(simulationModeRef.current === 'AI_ATTACK', tickCountRef.current);
+    setLatest(initialVerdict);
+    setHistory((prev) => [...prev.slice(-49), initialVerdict]);
+
+    // Continuous loop every 1.5 seconds
+    simTimerRef.current = setInterval(() => {
+      tickCountRef.current += 1;
+      const v = generateSimulatedVerdict(simulationModeRef.current === 'AI_ATTACK', tickCountRef.current);
+      setLatest(v);
+      setHistory((prev) => [...prev.slice(-49), v]);
+    }, 1500);
+  }, []);
+
   /* Start listening & streaming */
   const start = useCallback(async () => {
     setError(null);
@@ -411,11 +435,15 @@ export const DemoPage: React.FC = () => {
       };
       updateVolume();
 
+      /* Ensure AudioContext is running */
+      if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+      }
+
       /* 3. Try loading pcm-processor AudioWorklet */
       let workletLoaded = false;
       try {
         await audioCtx.audioWorklet.addModule('/pcm-processor.js');
-        await audioCtx.resume();
 
         const worklet = new AudioWorkletNode(audioCtx, 'pcm-processor');
         const sink = audioCtx.createGain();
@@ -434,7 +462,6 @@ export const DemoPage: React.FC = () => {
 
       /* 4. Connect to Backend WebSocket */
       setWsState('connecting');
-      let wsConnected = false;
 
       try {
         const ws = new WebSocket(WS_URL);
@@ -442,12 +469,12 @@ export const DemoPage: React.FC = () => {
         wsRef.current = ws;
 
         ws.onopen = () => {
-          wsConnected = true;
+          wsConnectedRef.current = true;
           setWsState('open');
         };
 
         ws.onclose = () => {
-          if (wsConnected) {
+          if (wsConnectedRef.current) {
             setWsState('closed');
             setListening(false);
             teardown();
@@ -456,7 +483,7 @@ export const DemoPage: React.FC = () => {
 
         ws.onerror = () => {
           // If backend WebSocket is not running, transition gracefully to Real-Time Local Emulation
-          if (!wsConnected) {
+          if (!wsConnectedRef.current) {
             console.info('Backend WebSocket offline — switching to 6-Layer Engine Local Telemetry Mode');
             setWsState('simulated');
             startLocalAnalysisLoop();
@@ -500,26 +527,7 @@ export const DemoPage: React.FC = () => {
       setListening(false);
       setWsState('idle');
     }
-  }, [teardown, simulationMode]);
-
-  /* Start periodic continuous analysis in preview / local engine mode */
-  const startLocalAnalysisLoop = useCallback(() => {
-    if (simTimerRef.current) clearInterval(simTimerRef.current);
-
-    // Initial instant verdict
-    tickCountRef.current += 1;
-    const initialVerdict = generateSimulatedVerdict(simulationMode === 'AI_ATTACK', tickCountRef.current);
-    setLatest(initialVerdict);
-    setHistory((prev) => [...prev.slice(-49), initialVerdict]);
-
-    // Continuous loop every 1.5 seconds
-    simTimerRef.current = setInterval(() => {
-      tickCountRef.current += 1;
-      const v = generateSimulatedVerdict(simulationMode === 'AI_ATTACK', tickCountRef.current);
-      setLatest(v);
-      setHistory((prev) => [...prev.slice(-49), v]);
-    }, 1500);
-  }, [simulationMode]);
+  }, [teardown, startLocalAnalysisLoop]);
 
   /* Start simulated acoustic stream directly (bypasses mic if blocked or unavailable) */
   const startSimulatedStream = useCallback(() => {
@@ -753,7 +761,7 @@ export const DemoPage: React.FC = () => {
                 </motion.div>
               ) : (
                 <motion.div
-                  key={`${latest.overall_authenticity_score}-${tickCountRef.current}`}
+                  key={`${latest.overall_authenticity_score}-${latest.samples_processed ?? 0}`}
                   initial={{ opacity: 0, scale: 0.96 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.96 }}

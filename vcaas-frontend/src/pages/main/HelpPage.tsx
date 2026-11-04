@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from '../../components/ui/Card';
-import { Search, ChevronDown, ChevronUp, HelpCircle, ShieldAlert, Cpu, DollarSign, RotateCcw } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, ShieldAlert, Cpu, DollarSign, RotateCcw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -135,8 +135,17 @@ export const HelpPage: React.FC = () => {
                 key={idx}
                 elevation="flat"
                 padding="md"
-                className="cursor-pointer transition-colors hover:border-primary-container/40"
+                role="button"
+                tabIndex={0}
+                aria-expanded={isOpen}
+                className="cursor-pointer transition-colors hover:border-primary-container/40 focus:outline-none focus:ring-2 focus:ring-primary-container/30"
                 onClick={() => setOpenIndex(isOpen ? null : idx)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setOpenIndex(isOpen ? null : idx);
+                  }
+                }}
               >
                 <div className="flex items-center justify-between gap-4">
                   <span className="font-recoletta text-base sm:text-lg font-bold text-on-surface">

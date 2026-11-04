@@ -49,6 +49,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { navigateToSubdomain, navigateToMainDomain } = useDomain();
 
   const [user, setUser] = useState<User | null>(() => {
+    // If explicitly logged out, do not revive demo user
+    if (localStorage.getItem('vcaas_logged_out') === 'true') {
+      return null;
+    }
+
     const saved = localStorage.getItem('vcaas_user');
     if (saved) {
       try {
@@ -90,6 +95,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signup = async (email: string, _password?: string, name?: string) => {
+    localStorage.removeItem('vcaas_logged_out');
     const newUser: User = {
       id: `usr_${Math.random().toString(36).substring(2, 9)}`,
       name: name || email.split('@')[0],
@@ -102,6 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const login = async (email: string, _password?: string) => {
+    localStorage.removeItem('vcaas_logged_out');
     const loggedInUser: User = {
       id: 'usr_forensic_9921',
       name: email.split('@')[0],
@@ -117,6 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginWithOAuth = async (provider: 'google' | 'github') => {
+    localStorage.removeItem('vcaas_logged_out');
     const oauthUser: User = {
       id: `usr_oauth_${provider}_${Date.now()}`,
       name: provider === 'google' ? 'Alex Rivera (Google)' : 'Dev Architect (GitHub)',
@@ -145,6 +153,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem('vcaas_user');
+    localStorage.setItem('vcaas_logged_out', 'true');
     navigateToMainDomain('/');
   };
 

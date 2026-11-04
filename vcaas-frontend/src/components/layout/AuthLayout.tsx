@@ -1,13 +1,11 @@
 import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
-import { DomainSwitcherBar } from './DomainSwitcherBar';
 import { WaveformVisualizer } from '../ui/WaveformVisualizer';
 import { Activity, ShieldCheck, Lock, Sparkles } from 'lucide-react';
 
 export const AuthLayout: React.FC = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <DomainSwitcherBar />
       <div className="flex-1 flex flex-col md:flex-row">
         {/* Left Branding / Acoustic Visualizer Panel */}
         <div className="w-full md:w-5/12 bg-[#0B1C30] text-white p-8 md:p-14 flex flex-col justify-between relative overflow-hidden">

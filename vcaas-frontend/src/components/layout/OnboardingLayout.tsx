@@ -1,13 +1,10 @@
 import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
-import { DomainSwitcherBar } from './DomainSwitcherBar';
 import { Activity, ShieldCheck, ArrowLeft } from 'lucide-react';
 
 export const OnboardingLayout: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#F8F9FF] text-on-surface flex flex-col">
-      <DomainSwitcherBar />
-
       {/* Top Header */}
       <header className="h-16 px-8 flex items-center justify-between border-b border-outline-subtle bg-white">
         <Link to="/" className="flex items-center gap-2.5">

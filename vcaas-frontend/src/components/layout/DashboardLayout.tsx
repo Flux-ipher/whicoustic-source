@@ -1,13 +1,11 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { DomainSwitcherBar } from './DomainSwitcherBar';
 import { SubdomainSidebar } from './SubdomainSidebar';
 import { SubdomainHeader } from './SubdomainHeader';
 
 export const DashboardLayout: React.FC = () => {
   return (
     <div className="min-h-screen bg-background text-on-surface flex flex-col">
-      <DomainSwitcherBar />
       <div className="flex-1 flex">
         <SubdomainSidebar />
         <div className="flex-1 flex flex-col min-w-0">

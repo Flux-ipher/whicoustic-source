@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: whicoustic-backend
+    runtime: python
+    plan: starter  # Render Starter Plan: $7/mo, 2 GB RAM, 1 CPU
+    region: oregon
+    branch: main
+    buildCommand: pip install -r requirements-render.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: PROJECT_NAME
+        value: Whicoustic
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_DB_URL
+        sync: false
+      - key: GOOGLE_DRIVE_FOLDER_ID
+        sync: false
+      - key: GOOGLE_DRIVE_CREDENTIALS_JSON
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: MOCK_AUTH_ENABLED
+        value: "false"
+      - key: PUBLIC_STREAMING_ENABLED
+        value: "true"
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "100"

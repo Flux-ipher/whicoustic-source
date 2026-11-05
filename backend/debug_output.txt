@@ -1,0 +1,24 @@
+watermark_results: {'found': False, 'confidence': 0.0}
+forensic_results: {'integrity': {'rms_level': 0.2906809151172638, 'peak_level': 0.499969482421875, 'dynamic_range': 0.4998779296875, 'clipping_detected': False, 'silence_ratio': 0.002131519274376417}, 'metadata': {'file_format': 'wav', 'creation_date': 'unknown', 'software': 'unknown', 'metadata_inconsistencies': []}, 'spectral': {'spectral_centroid_mean': 5501.049424516011, 'spectral_bandwidth_mean': 3179.4867563326015, 'spectral_rolloff_mean': 9341.250332919035, 'frequency_anomalies': [], 'spectral_consistency': 0.85}, 'manipulation_detected': True, 'manipulation_details': [], 'confidence': 0.85, 'recommendations': ['Potential manipulation detected - recommend deeper analysis', 'Check for splice points and spectral discontinuities', 'Consider watermark verification for additional validation']}
+TYPES:
+Key: integrity, Type: <class 'dict'>, Value: {'rms_level': 0.2906809151172638, 'peak_level': 0.499969482421875, 'dynamic_range': 0.4998779296875, 'clipping_detected': False, 'silence_ratio': 0.002131519274376417}
+  SubKey: rms_level, Type: <class 'float'>, Value: 0.2906809151172638
+  SubKey: peak_level, Type: <class 'float'>, Value: 0.499969482421875
+  SubKey: dynamic_range, Type: <class 'float'>, Value: 0.4998779296875
+  SubKey: clipping_detected, Type: <class 'bool'>, Value: False
+  SubKey: silence_ratio, Type: <class 'float'>, Value: 0.002131519274376417
+Key: metadata, Type: <class 'dict'>, Value: {'file_format': 'wav', 'creation_date': 'unknown', 'software': 'unknown', 'metadata_inconsistencies': []}
+  SubKey: file_format, Type: <class 'str'>, Value: wav
+  SubKey: creation_date, Type: <class 'str'>, Value: unknown
+  SubKey: software, Type: <class 'str'>, Value: unknown
+  SubKey: metadata_inconsistencies, Type: <class 'list'>, Value: []
+Key: spectral, Type: <class 'dict'>, Value: {'spectral_centroid_mean': 5501.049424516011, 'spectral_bandwidth_mean': 3179.4867563326015, 'spectral_rolloff_mean': 9341.250332919035, 'frequency_anomalies': [], 'spectral_consistency': 0.85}
+  SubKey: spectral_centroid_mean, Type: <class 'float'>, Value: 5501.049424516011
+  SubKey: spectral_bandwidth_mean, Type: <class 'float'>, Value: 3179.4867563326015
+  SubKey: spectral_rolloff_mean, Type: <class 'float'>, Value: 9341.250332919035
+  SubKey: frequency_anomalies, Type: <class 'list'>, Value: []
+  SubKey: spectral_consistency, Type: <class 'float'>, Value: 0.85
+Key: manipulation_detected, Type: <class 'bool'>, Value: True
+Key: manipulation_details, Type: <class 'list'>, Value: []
+Key: confidence, Type: <class 'float'>, Value: 0.85
+Key: recommendations, Type: <class 'list'>, Value: ['Potential manipulation detected - recommend deeper analysis', 'Check for splice points and spectral discontinuities', 'Consider watermark verification for additional validation']

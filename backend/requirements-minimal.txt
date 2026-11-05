@@ -1,0 +1,13 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+python-dotenv==1.0.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+sqlalchemy==2.0.52
+alembic==1.13.1
+numpy>=1.26.0
+soundfile>=0.12.1
+wave>=0.0.2
+requests
+reedsolo 

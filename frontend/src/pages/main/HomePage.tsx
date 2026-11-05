@@ -1,0 +1,305 @@
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import { Button } from '../../components/ui/Button';
+import { Card } from '../../components/ui/Card';
+import { WaveformVisualizer } from '../../components/ui/WaveformVisualizer';
+import { PageTransition } from '../../components/ui/PageTransition';
+import {
+  TalentVoiceIllustration,
+  BiometricShieldIllustration,
+  RoyaltyEscrowIllustration,
+} from '../../components/ui/Illustrations';
+import {
+  Mic,
+  ArrowRight,
+  Play,
+  CheckCircle2,
+  Zap,
+} from 'lucide-react';
+
+export const HomePage: React.FC = () => {
+  return (
+    <PageTransition className="space-y-24 pb-16">
+      {/* 1. HERO SECTION */}
+      <section className="relative pt-12 md:pt-20 px-6 max-w-container mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          className="text-center space-y-6 max-w-4xl mx-auto"
+        >
+          {/* Main Headline (Recoleta) with balanced wrap and clear proposition */}
+          <h1 className="font-recoleta text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-on-surface leading-[1.12] [text-wrap:balance]">
+            AI Voice Licensing & Biometric Protection for{' '}
+            <span className="text-primary-container relative inline-block">
+              Creators & Studios
+              <svg
+                className="absolute -bottom-2 left-0 w-full h-3 text-primary-container/30"
+                viewBox="0 0 100 12"
+                preserveAspectRatio="none"
+              >
+                <path d="M0,8 Q50,0 100,8" stroke="currentColor" strokeWidth="3" fill="none" />
+              </svg>
+            </span>
+          </h1>
+
+          {/* Subtitle (Upright, high contrast dark slate, no italic) */}
+          <p className="font-berthold text-base sm:text-lg md:text-xl text-slate-700 leading-relaxed max-w-2xl mx-auto [text-wrap:balance]">
+            Create verified neural voice models with cryptographic watermarking. Protect your vocal identity from unauthorized replication, license to verified productions, and automate royalty payouts.
+          </p>
+
+          {/* Action CTAs */}
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link to="/signup">
+              <Button
+                variant="primary"
+                size="lg"
+                icon={<ArrowRight className="w-4 h-4" />}
+                iconPosition="right"
+              >
+                Get started free
+              </Button>
+            </Link>
+            <Link to="/demo">
+              <Button variant="secondary" size="lg" icon={<Play className="w-4 h-4 text-primary-container" />}>
+                Test Live Authentication
+              </Button>
+            </Link>
+          </div>
+
+          {/* Trust Highlights - Defensible, verified claims */}
+          <div className="pt-6 flex flex-wrap items-center justify-center gap-6 text-xs sm:text-sm font-berthold text-slate-700">
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span className="font-medium">Six-layer verification</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span className="font-medium">Automated licensing escrow</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span className="font-medium">Studio-calibrated 24 kHz synthesis</span>
+            </span>
+          </div>
+        </motion.div>
+
+        {/* Hero Acoustic Visualizer Module */}
+        <div className="mt-14 max-w-4xl mx-auto">
+          <Card elevation="amber-border" padding="lg" className="backdrop-blur-md relative overflow-hidden">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-6 border-b border-outline-subtle">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary-container/10 flex items-center justify-center text-primary-container">
+                  <Mic className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-recoleta text-base font-bold text-on-surface">
+                    Acoustic Biometric Spectrum
+                  </h4>
+                  <p className="font-code text-xs text-secondary">
+                    SHA256: 4080c0aea1ea4cc3a63a13901af1baaa • 42ms TTFT
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Dynamic Waveform Display */}
+            <div className="py-6">
+              <WaveformVisualizer height={72} barCount={48} />
+            </div>
+
+            {/* Telemetry Footer */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-outline-subtle text-xs font-berthold">
+              <div>
+                <span className="text-secondary block">Sampling Frequency</span>
+                <span className="font-bold text-on-surface font-code">24,000 Hz</span>
+              </div>
+              <div>
+                <span className="text-secondary block">Phoneme Match</span>
+                <span className="font-bold text-emerald-600 font-code">99.84% Precision</span>
+              </div>
+              <div>
+                <span className="text-secondary block">Watermark Strength</span>
+                <span className="font-bold text-primary-container font-code">Cryptographic L3</span>
+              </div>
+              <div>
+                <span className="text-secondary block">Synthesis Architecture</span>
+                <span className="font-bold text-on-surface font-code">XTTS-v2 Neural</span>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </section>
+
+      {/* 2. THREE PILLARS SECTION */}
+      <section className="max-w-container mx-auto px-6">
+        <div className="text-center max-w-2xl mx-auto mb-14 space-y-3">
+          <h2 className="font-recoleta text-3xl sm:text-4xl font-bold text-on-surface">
+            Architected for Artists. Engineered for Studios.
+          </h2>
+          <p className="font-berthold text-slate-700 text-base">
+            A comprehensive infrastructure built to bridge the gap between autonomous AI synthesis and authentic voice rights ownership.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Pillar 1 */}
+          <Card elevation="elevated" padding="lg" hoverEffect className="space-y-4 flex flex-col justify-between">
+            <div>
+              <div className="h-28 flex items-center justify-center pb-2">
+                <TalentVoiceIllustration size={110} />
+              </div>
+              <h3 className="font-recoleta text-2xl font-bold text-on-surface">
+                Neural Synthesis Studio
+              </h3>
+              <p className="font-berthold text-sm text-slate-600 leading-relaxed mt-2">
+                Clone voice personas with under 5 minutes of clean audio. Train multilingual models that retain vocal timber, emotional inflection, and natural breath cadence.
+              </p>
+            </div>
+            <ul className="space-y-2 text-xs font-berthold text-on-surface pt-2">
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-primary-container" />
+                <span>Zero-shot cross-lingual adaptation</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-primary-container" />
+                <span>Instant emotion and pacing sliders</span>
+              </li>
+            </ul>
+          </Card>
+
+          {/* Pillar 2 */}
+          <Card elevation="elevated" padding="lg" hoverEffect className="space-y-4 flex flex-col justify-between">
+            <div>
+              <div className="h-28 flex items-center justify-center pb-2">
+                <BiometricShieldIllustration size={110} />
+              </div>
+              <h3 className="font-recoleta text-2xl font-bold text-on-surface">
+                Cryptographic Watermarking
+              </h3>
+              <p className="font-berthold text-sm text-slate-600 leading-relaxed mt-2">
+                Imperceptible ultrasonic steganography binds every rendered second to a cryptographic hash. Clones generated outside your authorization are detected via 6-layer analysis.
+              </p>
+            </div>
+            <ul className="space-y-2 text-xs font-berthold text-on-surface pt-2">
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-primary-container" />
+                <span>Lossless compression survivability</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-primary-container" />
+                <span>Automated real-time broadcast sniffing</span>
+              </li>
+            </ul>
+          </Card>
+
+          {/* Pillar 3 */}
+          <Card elevation="elevated" padding="lg" hoverEffect className="space-y-4 flex flex-col justify-between">
+            <div>
+              <div className="h-28 flex items-center justify-center pb-2">
+                <RoyaltyEscrowIllustration size={110} />
+              </div>
+              <h3 className="font-recoleta text-2xl font-bold text-on-surface">
+                Automated Royalty Escrow
+              </h3>
+              <p className="font-berthold text-sm text-slate-600 leading-relaxed mt-2">
+                Programmatic licensing escrow ensures you get paid per second of game play, film dialogue, or commercial broadcast without chasing accounts receivable.
+              </p>
+            </div>
+            <ul className="space-y-2 text-xs font-berthold text-on-surface pt-2">
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-primary-container" />
+                <span>USDC or direct Fedwire ACH payouts</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-primary-container" />
+                <span>Customizable royalty splits & territory rules</span>
+              </li>
+            </ul>
+          </Card>
+        </div>
+      </section>
+
+      {/* 3. HOW IT WORKS FLOW */}
+      <section className="bg-white border-y border-outline-subtle py-20">
+        <div className="max-w-container mx-auto px-6">
+          <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
+            <h2 className="font-recoleta text-3xl sm:text-4xl font-bold text-on-surface">
+              From Microphone to Global Royalties in 3 Steps
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+            {/* Step 1 */}
+            <div className="space-y-4 p-6 rounded-card bg-surface-container/60 border border-outline-subtle">
+              <span className="font-recoleta text-4xl font-bold text-primary-container">
+                01
+              </span>
+              <h3 className="font-recoleta text-xl font-bold text-on-surface">
+                Calibrate Your Acoustic Anchor
+              </h3>
+              <p className="font-berthold text-sm text-secondary leading-relaxed">
+                Complete the browser-based acoustic onboarding. Read three phonetic balance sentences to generate your permanent SHA-256 voice passport.
+              </p>
+            </div>
+
+            {/* Step 2 */}
+            <div className="space-y-4 p-6 rounded-card bg-surface-container/60 border border-outline-subtle">
+              <span className="font-recoleta text-4xl font-bold text-primary-container">
+                02
+              </span>
+              <h3 className="font-recoleta text-xl font-bold text-on-surface">
+                Set Pricing & Licensing Boundaries
+              </h3>
+              <p className="font-berthold text-sm text-secondary leading-relaxed">
+                Determine your base hourly rate and royalty split. Restrict sensitive categories (e.g., political ads, adult content) with automated contract gates.
+              </p>
+            </div>
+
+            {/* Step 3 */}
+            <div className="space-y-4 p-6 rounded-card bg-surface-container/60 border border-outline-subtle">
+              <span className="font-recoleta text-4xl font-bold text-primary-container">
+                03
+              </span>
+              <h3 className="font-recoleta text-xl font-bold text-on-surface">
+                Receive Automated Disbursements
+              </h3>
+              <p className="font-berthold text-sm text-secondary leading-relaxed">
+                Track real-time synthesis consumption on your sub-domain dashboard. Withdraw monthly earnings via automated direct deposit or crypto vault.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. FINAL CTA BANNER */}
+      <section className="max-w-container mx-auto px-6">
+        <div className="bg-[#0B1C30] rounded-card-lg p-10 md:p-16 text-center text-white relative overflow-hidden shadow-2xl">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-primary-container/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative z-10 max-w-2xl mx-auto space-y-6">
+            <h2 className="font-recoleta text-4xl md:text-5xl font-bold tracking-tight text-white">
+              Ready to safeguard and monetize your voice?
+            </h2>
+            <p className="font-berthold text-slate-300 text-base md:text-lg">
+              Join voice talent, creators, and entertainment studios licensing synthetic audio with biometric verification.
+            </p>
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link to="/signup">
+                <Button variant="primary" size="lg" icon={<Zap className="w-4 h-4" />}>
+                  Get started free
+                </Button>
+              </Link>
+              <Link to="/contact">
+                <Button variant="secondary" size="lg">
+                  Schedule Studio Consultation
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+    </PageTransition>
+  );
+};
+

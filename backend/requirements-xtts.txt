@@ -1,0 +1,15 @@
+# Minimal dependencies for running whicoustic_server with XTTS zero-shot cloning
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+loguru==0.7.2
+
+# Audio / ML stack (let TTS resolve numpy version)
+soundfile==0.12.1
+
+# PyTorch CPU build installs automatically via pip wheels
+torch==2.5.1
+torchaudio==2.5.1
+
+# Coqui TTS for XTTS v2
+TTS==0.22.0

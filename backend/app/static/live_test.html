@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Whicoustic Live Voice Verification & Deepfake Detection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card: #111827;
+      --card-border: #1f293d;
+      --text-1: #f9fafb;
+      --text-2: #9ca3af;
+      --accent: #10b981;
+      --accent-glow: rgba(16, 185, 129, 0.2);
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --blue: #3b82f6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text-1);
+      font-family: 'Inter', -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(17, 24, 39, 0.7);
+      backdrop-filter: blur(10px);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 700;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+    .brand-badge {
+      font-size: 0.75rem;
+      background: var(--accent-glow);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      font-weight: 600;
+    }
+    .tabs {
+      display: flex;
+      gap: 1rem;
+    }
+    .tab-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-2);
+      padding: 0.5rem 1.2rem;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover { color: var(--text-1); background: var(--card-border); }
+    .tab-btn.active {
+      color: var(--text-1);
+      background: var(--card);
+      border-color: var(--accent);
+    }
+    main {
+      flex: 1;
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    /* Cards & Layout */
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    .card-title {
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-2);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    /* Gauge / Verdict Hero */
+    .hero-verdict {
+      text-align: center;
+      padding: 2rem;
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0.05) 0%, transparent 100%);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      margin-bottom: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .score-circle {
+      font-size: 3.5rem;
+      font-weight: 800;
+      color: var(--accent);
+      margin: 0.5rem 0;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .verdict-tag {
+      display: inline-block;
+      font-size: 1.1rem;
+      font-weight: 700;
+      padding: 0.4rem 1.4rem;
+      border-radius: 9999px;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      letter-spacing: 0.05em;
+    }
+    .verdict-tag.spoof {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+    .verdict-tag.suspicious {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--warning);
+      border-color: var(--warning);
+    }
+    
+    /* Controls */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      font-size: 0.95rem;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+    }
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-danger {
+      background: var(--danger);
+      color: #fff;
+    }
+    .btn-secondary {
+      background: #1f293d;
+      color: var(--text-1);
+      border: 1px solid #374151;
+    }
+    .btn-secondary:hover { background: #374151; }
+    
+    /* Live Canvas Visualizer */
+    canvas#visualizer {
+      width: 100%;
+      height: 100px;
+      background: #0d131f;
+      border-radius: 10px;
+      margin-top: 1rem;
+      border: 1px solid var(--card-border);
+    }
+    
+    /* Metric rows */
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 0.9rem;
+    }
+    .metric-row:last-child { border-bottom: none; }
+    .metric-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: var(--text-1);
+    }
+    .bar-container {
+      width: 100%;
+      height: 8px;
+      background: #1f293d;
+      border-radius: 4px;
+      margin-top: 0.4rem;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    
+    /* Drop Zone */
+    .dropzone {
+      border: 2px dashed #374151;
+      border-radius: 14px;
+      padding: 2.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: rgba(17, 24, 39, 0.4);
+      margin-bottom: 1.5rem;
+    }
+    .dropzone:hover, .dropzone.dragover {
+      border-color: var(--accent);
+      background: rgba(16, 185, 129, 0.05);
+    }
+    
+    /* Code block */
+    pre {
+      background: #090d16;
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: #93c5fd;
+      border: 1px solid var(--card-border);
+      max-height: 250px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+        <line x1="12" y1="19" x2="12" y2="23"/>
+        <line x1="8" y1="23" x2="16" y2="23"/>
+      </svg>
+      Whicoustic Defense Engine
+      <span class="brand-badge">6-Layer Live</span>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('stream-tab')">Real-Time Mic Stream</button>
+      <button class="tab-btn" onclick="switchTab('file-tab')">6-Layer File Analysis</button>
+      <a href="/docs" target="_blank" class="tab-btn" style="text-decoration: none;">API Docs</a>
+    </div>
+  </header>
+
+  <main>
+    <!-- TAB 1: Real-Time Mic Stream -->
+    <section id="stream-tab" class="tab-content active">
+      <div class="hero-verdict">
+        <div style="color: var(--text-2); font-size: 0.9rem;">LIVE VERDICT</div>
+        <div id="stream-verdict-tag" class="verdict-tag">WAITING FOR AUDIO</div>
+        <div id="stream-score" class="score-circle">--%</div>
+        <div id="stream-status" style="font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">
+          WebSocket: Disconnected (Ready)
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 1rem; align-items: center; justify-content: center; margin-bottom: 2rem;">
+        <button id="mic-toggle-btn" class="btn btn-primary" onclick="toggleMicrophone()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+          Start Microphone
+        </button>
+        <button class="btn btn-secondary" onclick="simulateStream()">
+          Simulate Audio Stream
+        </button>
+      </div>
+
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-title">Live PCM Audio Monitor</div>
+        <canvas id="visualizer"></canvas>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <div class="card-title">
+            <span>Layer 1: Acoustic Artifacts</span>
+            <span style="font-size: 0.7rem; color: #10b981; background: rgba(16,185,129,0.1); padding: 2px 6px; border-radius: 4px;">⚡ 500ms Fast</span>
+          </div>
+          <div class="metric-row"><span>Authenticity</span><span id="s-l1-score" class="metric-val">--</span></div>
+          <div class="bar-container"><div id="s-l1-bar" class="bar-fill"></div></div>
+          <div class="metric-row"><span>Status</span><span id="s-l1-status" class="metric-val">Pending</span></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span>Layer 2: Speaker Biometrics</span>
+            <span style="font-size: 0.7rem; color: #10b981; background: rgba(16,185,129,0.1); padding: 2px 6px; border-radius: 4px;">⚡ 500ms Fast</span>
+          </div>
+          <div class="metric-row"><span>Temporal Stability</span><span id="s-l2-score" class="metric-val">--</span></div>
+          <div class="bar-container"><div id="s-l2-bar" class="bar-fill"></div></div>
+          <div class="metric-row"><span>Intra-Utterance</span><span id="s-l2-status" class="metric-val">Consistent</span></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span>Layer 3: Pitch Dynamics (f0)</span>
+            <span style="font-size: 0.7rem; color: #10b981; background: rgba(16,185,129,0.1); padding: 2px 6px; border-radius: 4px;">⚡ 500ms Fast</span>
+          </div>
+          <div class="metric-row"><span>Prosodic Naturalness</span><span id="s-l3-score" class="metric-val">--</span></div>
+          <div class="bar-container"><div id="s-l3-bar" class="bar-fill"></div></div>
+          <div class="metric-row"><span>Pitch Stability (CV)</span><span id="s-l3-status" class="metric-val">--</span></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span>Layer 4: Paralinguistic Energy</span>
+            <span style="font-size: 0.7rem; color: #10b981; background: rgba(16,185,129,0.1); padding: 2px 6px; border-radius: 4px;">⚡ 500ms Fast</span>
+          </div>
+          <div class="metric-row"><span>Arousal Dynamics</span><span id="s-l4-score" class="metric-val">--</span></div>
+          <div class="bar-container"><div id="s-l4-bar" class="bar-fill"></div></div>
+          <div class="metric-row"><span>Variance</span><span id="s-l4-status" class="metric-val">--</span></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span>Layer 5: Whisper Semantic ASR</span>
+            <span style="font-size: 0.7rem; color: #60a5fa; background: rgba(96,165,250,0.1); padding: 2px 6px; border-radius: 4px;">🔄 Deep (≥3s)</span>
+          </div>
+          <div class="metric-row"><span>Authenticity</span><span id="s-l5-score" class="metric-val">--</span></div>
+          <div class="bar-container"><div id="s-l5-bar" class="bar-fill"></div></div>
+          <div class="metric-row"><span>Speech Rate</span><span id="s-l5-wpm" class="metric-val">Accumulating...</span></div>
+          <div style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-2); min-height: 2.2rem;">
+            <span>Transcript: </span><span id="s-l5-transcript" style="color: #a7f3d0; font-style: italic;">Speak for 3s to transcribe...</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span>Layer 6: Watermark & Provenance</span>
+            <span style="font-size: 0.7rem; color: #a78bfa; background: rgba(167,139,250,0.1); padding: 2px 6px; border-radius: 4px;">🛡️ Deep (≥7s)</span>
+          </div>
+          <div class="metric-row"><span>Authenticity</span><span id="s-l6-score" class="metric-val">--</span></div>
+          <div class="bar-container"><div id="s-l6-bar" class="bar-fill"></div></div>
+          <div class="metric-row"><span>Watermark Status</span><span id="s-l6-status" class="metric-val">Buffering (needs 7s)...</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: Full 6-Layer File Analysis -->
+    <section id="file-tab" class="tab-content">
+      <div class="dropzone" id="file-dropzone" onclick="document.getElementById('file-input').click()">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" style="margin-bottom: 0.5rem;">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 0.25rem;">Choose an audio file or drag & drop</div>
+        <div style="font-size: 0.85rem; color: var(--text-2);">Supports WAV, FLAC, MP3, M4A</div>
+        <input type="file" id="file-input" style="display: none;" accept="audio/*" onchange="handleFileSelect(event)">
+      </div>
+
+      <div id="file-loading" style="display: none; text-align: center; padding: 2rem;">
+        <div style="color: var(--accent); font-weight: 600; font-size: 1.1rem;">Running 6-Layer Deep Forensic Pipeline...</div>
+        <div style="font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">Computing Biometric Consistency, ASR Transcription, Prosodic Variation & Cryptographic Watermark</div>
+      </div>
+
+      <div id="file-results" style="display: none;">
+        <div class="card" style="margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-2);">AUDIO PREVIEW:</span>
+            <span id="f-file-name" style="font-size: 0.9rem; font-weight: 600; color: #a7f3d0;"></span>
+          </div>
+          <audio id="f-audio-player" controls style="height: 36px; border-radius: 8px; outline: none;"></audio>
+        </div>
+
+        <div class="hero-verdict">
+          <div style="color: var(--text-2); font-size: 0.9rem;">FORENSIC VERDICT</div>
+          <div id="f-verdict-tag" class="verdict-tag">AUTHENTIC (HUMAN)</div>
+          <div id="f-score" class="score-circle">98.0%</div>
+          <div id="f-meta" style="font-size: 0.85rem; color: var(--text-2); margin-top: 0.5rem;">
+            Analysis ID: -- | Confidence: --
+          </div>
+        </div>
+
+        <div class="grid" style="margin-bottom: 1.5rem;">
+          <div class="card">
+            <div class="card-title">L1: Anti-Spoof Acoustic</div>
+            <div class="metric-row"><span>Authenticity</span><span id="f-l1-score" class="metric-val">--</span></div>
+            <div class="metric-row"><span>Spoof Flag</span><span id="f-l1-flag" class="metric-val">--</span></div>
+            <div class="metric-row"><span>Phase Variance</span><span id="f-l1-phase" class="metric-val">--</span></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">L2: Speaker Consistency</div>
+            <div class="metric-row"><span>Biometric Score</span><span id="f-l2-score" class="metric-val">--</span></div>
+            <div class="metric-row"><span>Same Speaker</span><span id="f-l2-speaker" class="metric-val">--</span></div>
+            <div class="metric-row"><span>Embedding Drift</span><span id="f-l2-drift" class="metric-val">--</span></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">L3: Prosody Dynamics</div>
+            <div class="metric-row"><span>Naturalness Score</span><span id="f-l3-score" class="metric-val">--</span></div>
+            <div class="metric-row"><span>Mean Pitch (f0)</span><span id="f-l3-f0" class="metric-val">--</span></div>
+            <div class="metric-row"><span>Pitch Stability (CV)</span><span id="f-l3-cv" class="metric-val">--</span></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">L4: Paralinguistic</div>
+            <div class="metric-row"><span>Arousal Score</span><span id="f-l4-score" class="metric-val">--</span></div>
+            <div class="metric-row"><span>Energy Variance</span><span id="f-l4-var" class="metric-val">--</span></div>
+            <div class="metric-row"><span>Spectral Contrast</span><span id="f-l4-contrast" class="metric-val">--</span></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">L5: Semantic & Whisper ASR</div>
+            <div class="metric-row"><span>Authenticity</span><span id="f-l5-score" class="metric-val">--</span></div>
+            <div class="metric-row"><span>Speech Rate</span><span id="f-l5-wpm" class="metric-val">--</span></div>
+            <div class="metric-row"><span>Pause Consistency</span><span id="f-l5-pause" class="metric-val">--</span></div>
+            <div style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--text-2);">
+              <strong style="color: var(--text-1);">Transcription:</strong>
+              <p id="f-l5-transcript" style="margin-top: 0.25rem; font-style: italic; color: #a7f3d0;">--</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">L6: Watermark & Provenance</div>
+            <div class="metric-row"><span>Watermark Detected</span><span id="f-l6-found" class="metric-val">--</span></div>
+            <div class="metric-row"><span>Confidence</span><span id="f-l6-conf" class="metric-val">--</span></div>
+            <div class="metric-row"><span>Verdict</span><span id="f-l6-verdict" class="metric-val">--</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Raw Analysis Payload (JSON)</span>
+            <button class="btn btn-secondary" style="padding: 0.3rem 0.8rem; font-size: 0.75rem;" onclick="copyJsonPayload()">Copy JSON</button>
+          </div>
+          <pre id="f-raw-json">{}</pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Tab switching
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      if (tabId === 'stream-tab') {
+        document.querySelectorAll('.tab-btn')[0].classList.add('active');
+        document.getElementById('stream-tab').classList.add('active');
+      } else {
+        document.querySelectorAll('.tab-btn')[1].classList.add('active');
+        document.getElementById('file-tab').classList.add('active');
+      }
+    }
+
+    // Audio / Visualizer setup
+    let audioCtx = null;
+    let micStream = null;
+    let ws = null;
+    let processor = null;
+    let isStreaming = false;
+
+    const canvas = document.getElementById('visualizer');
+    const canvasCtx = canvas.getContext('2d');
+
+    function drawWaveform(analyser, dataArray) {
+      if (!isStreaming) {
+        canvasCtx.fillStyle = '#0d131f';
+        canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
+      requestAnimationFrame(() => drawWaveform(analyser, dataArray));
+      analyser.getByteTimeDomainData(dataArray);
+
+      canvasCtx.fillStyle = '#0d131f';
+      canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+      canvasCtx.lineWidth = 2;
+      canvasCtx.strokeStyle = '#10b981';
+      canvasCtx.beginPath();
+
+      const sliceWidth = canvas.width / dataArray.length;
+      let x = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        const v = dataArray[i] / 128.0;
+        const y = (v * canvas.height) / 2;
+        if (i === 0) canvasCtx.moveTo(x, y);
+        else canvasCtx.lineTo(x, y);
+        x += sliceWidth;
+      }
+      canvasCtx.lineTo(canvas.width, canvas.height / 2);
+      canvasCtx.stroke();
+    }
+
+    // Downsample and convert float32 to int16 PCM
+    function floatToInt16(floatArr) {
+      const int16 = new Int16Array(floatArr.length);
+      for (let i = 0; i < floatArr.length; i++) {
+        const s = Math.max(-1, Math.min(1, floatArr[i]));
+        int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
+      return int16;
+    }
+
+    async function toggleMicrophone() {
+      const btn = document.getElementById('mic-toggle-btn');
+      if (isStreaming) {
+        // Stop
+        if (ws) ws.close();
+        if (micStream) micStream.getTracks().forEach(t => t.stop());
+        if (audioCtx) audioCtx.close();
+        isStreaming = false;
+        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Start Microphone`;
+        btn.className = "btn btn-primary";
+        document.getElementById('stream-status').innerText = "WebSocket: Disconnected (Stopped)";
+        return;
+      }
+
+      // Start
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, sampleRate: 16000 } });
+        
+        const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProto}//${window.location.host}/api/v1/verify/stream`;
+        
+        document.getElementById('stream-status').innerText = `Connecting to ${wsUrl}...`;
+        ws = new WebSocket(wsUrl);
+        ws.binaryType = 'arraybuffer';
+
+        ws.onopen = () => {
+          document.getElementById('stream-status').innerText = "WebSocket: Connected (Streaming Live PCM Audio)";
+          isStreaming = true;
+          btn.innerHTML = `Stop Microphone`;
+          btn.className = "btn btn-danger";
+
+          const source = audioCtx.createMediaStreamSource(micStream);
+          const analyser = audioCtx.createAnalyser();
+          analyser.fftSize = 512;
+          source.connect(analyser);
+
+          const dataArray = new Uint8Array(analyser.frequencyBinCount);
+          drawWaveform(analyser, dataArray);
+
+          // Script processor to chunk 16kHz audio
+          const bufferSize = 2048;
+          processor = audioCtx.createScriptProcessor(bufferSize, 1, 1);
+          source.connect(processor);
+          processor.connect(audioCtx.destination);
+
+          processor.onaudioprocess = (e) => {
+            if (!isStreaming || ws.readyState !== WebSocket.OPEN) return;
+            const inputData = e.inputBuffer.getChannelData(0);
+            const pcm16 = floatToInt16(inputData);
+            ws.send(pcm16.buffer);
+          };
+        };
+
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          updateStreamUI(data);
+        };
+
+        ws.onerror = (e) => {
+          console.error("WS Error:", e);
+          document.getElementById('stream-status').innerText = "WebSocket Error: Check server connection.";
+        };
+
+        ws.onclose = () => {
+          document.getElementById('stream-status').innerText = "WebSocket: Closed";
+        };
+
+      } catch (err) {
+        alert("Microphone access error: " + err.message);
+      }
+    }
+
+    function updateStreamUI(data) {
+      if (data.overall_authenticity_score !== undefined) {
+        const score = Math.round(data.overall_authenticity_score * 100);
+        const scoreEl = document.getElementById('stream-score');
+        scoreEl.innerText = score + '%';
+
+        const tag = document.getElementById('stream-verdict-tag');
+        tag.innerText = data.verdict || (data.is_authentic ? "AUTHENTIC (HUMAN)" : "SYNTHETIC / SPOOF");
+        
+        if (score >= 75) {
+          tag.className = "verdict-tag";
+          scoreEl.style.color = "var(--accent)";
+        } else if (score >= 50) {
+          tag.className = "verdict-tag suspicious";
+          scoreEl.style.color = "var(--warning)";
+        } else {
+          tag.className = "verdict-tag spoof";
+          scoreEl.style.color = "var(--danger)";
+        }
+
+        const layers = data.layers || {};
+        if (layers.layer1_antispoof) {
+          const l1 = layers.layer1_antispoof.score || 0;
+          document.getElementById('s-l1-score').innerText = (l1 * 100).toFixed(1) + '%';
+          document.getElementById('s-l1-bar').style.width = (l1 * 100) + '%';
+          document.getElementById('s-l1-status').innerText = layers.layer1_antispoof.is_spoof ? "Spoof Detected" : "Clean Human Voice";
+        }
+        if (layers.layer2_speaker_consistency) {
+          const l2 = layers.layer2_speaker_consistency.score || 0;
+          document.getElementById('s-l2-score').innerText = (l2 * 100).toFixed(1) + '%';
+          document.getElementById('s-l2-bar').style.width = (l2 * 100) + '%';
+          document.getElementById('s-l2-status').innerText = layers.layer2_speaker_consistency.is_consistent ? "Biometrically Stable" : "Speaker Shift Detected";
+        }
+        if (layers.layer3_prosody) {
+          const l3 = layers.layer3_prosody.score || 0;
+          document.getElementById('s-l3-score').innerText = (l3 * 100).toFixed(1) + '%';
+          document.getElementById('s-l3-bar').style.width = (l3 * 100) + '%';
+          document.getElementById('s-l3-status').innerText = layers.layer3_prosody.f0_mean_hz ? `${layers.layer3_prosody.f0_mean_hz.toFixed(0)} Hz` : "Active";
+        }
+        if (layers.layer4_paralinguistic) {
+          const l4 = layers.layer4_paralinguistic.score || 0;
+          document.getElementById('s-l4-score').innerText = (l4 * 100).toFixed(1) + '%';
+          document.getElementById('s-l4-bar').style.width = (l4 * 100) + '%';
+          document.getElementById('s-l4-status').innerText = "Calibrated";
+        }
+        if (layers.layer5_semantic) {
+          const l5 = layers.layer5_semantic.score !== undefined ? layers.layer5_semantic.score : (layers.layer5_semantic.authenticity_score || 0.5);
+          document.getElementById('s-l5-score').innerText = (l5 * 100).toFixed(1) + '%';
+          document.getElementById('s-l5-bar').style.width = (l5 * 100) + '%';
+          const wpm = layers.layer5_semantic.speech_rate_wpm;
+          document.getElementById('s-l5-wpm').innerText = wpm ? `${wpm.toFixed(0)} WPM` : "Active";
+          if (layers.layer5_semantic.transcription) {
+            document.getElementById('s-l5-transcript').innerText = `"${layers.layer5_semantic.transcription}"`;
+          }
+        }
+        if (layers.layer6_watermark) {
+          const l6 = layers.layer6_watermark.score !== undefined ? layers.layer6_watermark.score : (layers.layer6_watermark.found ? 0.0 : 1.0);
+          document.getElementById('s-l6-score').innerText = (l6 * 100).toFixed(1) + '%';
+          document.getElementById('s-l6-bar').style.width = (l6 * 100) + '%';
+          document.getElementById('s-l6-status').innerText = layers.layer6_watermark.found ? "Watermark Detected!" : "Clean (No Watermark)";
+        }
+      }
+    }
+
+    async function simulateStream() {
+      // Connects WebSocket and sends synthetic audio
+      const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProto}//${window.location.host}/api/v1/verify/stream`;
+      const sock = new WebSocket(wsUrl);
+      sock.binaryType = 'arraybuffer';
+      sock.onopen = async () => {
+        document.getElementById('stream-status').innerText = "Simulating streaming audio frames...";
+        // Generate 16kHz sine + noise
+        const chunkSamples = 480;
+        const pcm = new Int16Array(chunkSamples);
+        for (let frame = 0; frame < 50; frame++) {
+          for (let i = 0; i < chunkSamples; i++) {
+            pcm[i] = Math.sin((frame * chunkSamples + i) * 0.05) * 15000 + (Math.random() - 0.5) * 2000;
+          }
+          sock.send(pcm.buffer);
+          await new Promise(r => setTimeout(r, 30));
+        }
+      };
+      sock.onmessage = (e) => updateStreamUI(JSON.parse(e.data));
+    }
+
+    // TAB 2: File Analysis
+    async function handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      await uploadAndAnalyze(file);
+    }
+
+    const dropzone = document.getElementById('file-dropzone');
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files.length > 0) {
+        await uploadAndAnalyze(e.dataTransfer.files[0]);
+      }
+    });
+
+    function copyJsonPayload() {
+      const text = document.getElementById('f-raw-json').innerText;
+      if (!text || text === '{}') return;
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Analysis JSON copied to clipboard!');
+      }).catch(() => {
+        const dummy = document.createElement('textarea');
+        dummy.value = text;
+        document.body.appendChild(dummy);
+        dummy.select();
+        document.execCommand('copy');
+        document.body.removeChild(dummy);
+        alert('Analysis JSON copied to clipboard!');
+      });
+    }
+
+    async function uploadAndAnalyze(file) {
+      document.getElementById('file-loading').style.display = 'block';
+      document.getElementById('file-results').style.display = 'none';
+
+      document.getElementById('f-file-name').innerText = file.name;
+      const audioPlayer = document.getElementById('f-audio-player');
+      audioPlayer.src = URL.createObjectURL(file);
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await fetch('/api/v1/verify/full-analysis', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        document.getElementById('file-loading').style.display = 'none';
+        document.getElementById('file-results').style.display = 'block';
+        displayFileResults(data);
+      } catch (err) {
+        document.getElementById('file-loading').style.display = 'none';
+        alert("Forensic analysis error: " + err.message);
+      }
+    }
+
+    function displayFileResults(data) {
+      const score = Math.round((data.overall_authenticity_score || 0) * 100);
+      document.getElementById('f-score').innerText = score + '%';
+      
+      const tag = document.getElementById('f-verdict-tag');
+      tag.innerText = data.verdict || "UNKNOWN";
+      if (score >= 80) tag.className = "verdict-tag";
+      else if (score >= 50) tag.className = "verdict-tag suspicious";
+      else tag.className = "verdict-tag spoof";
+
+      document.getElementById('f-meta').innerText = `ID: ${data.analysis_id || '--'} | Analyzed at: ${data.analyzed_at || '--'}`;
+
+      const l = data.layers || {};
+      if (l.layer1_antispoof) {
+        document.getElementById('f-l1-score').innerText = ((l.layer1_antispoof.score || 0) * 100).toFixed(1) + '%';
+        document.getElementById('f-l1-flag').innerText = l.layer1_antispoof.is_spoof ? "Spoof" : "Clean Human";
+        document.getElementById('f-l1-phase').innerText = l.layer1_antispoof.features?.phase_var?.toFixed(2) || '--';
+      }
+      if (l.layer2_speaker) {
+        document.getElementById('f-l2-score').innerText = ((l.layer2_speaker.score || 0) * 100).toFixed(1) + '%';
+        document.getElementById('f-l2-speaker').innerText = l.layer2_speaker.is_same_speaker ? "Consistent (Same)" : "Drift Detected";
+        document.getElementById('f-l2-drift').innerText = (l.layer2_speaker.embedding_drift || 0).toFixed(4);
+      }
+      if (l.layer3_prosody) {
+        document.getElementById('f-l3-score').innerText = ((l.layer3_prosody.score || 0) * 100).toFixed(1) + '%';
+        document.getElementById('f-l3-f0').innerText = (l.layer3_prosody.f0_mean_hz || 0).toFixed(1) + ' Hz';
+        document.getElementById('f-l3-cv').innerText = (l.layer3_prosody.pitch_stability_cv || 0).toFixed(4);
+      }
+      if (l.layer4_paralinguistic) {
+        document.getElementById('f-l4-score').innerText = ((l.layer4_paralinguistic.score || 0) * 100).toFixed(1) + '%';
+        document.getElementById('f-l4-var').innerText = (l.layer4_paralinguistic.arousal_variance || 0).toFixed(4);
+        document.getElementById('f-l4-contrast').innerText = (l.layer4_paralinguistic.spectral_contrast_std || 0).toFixed(2);
+      }
+      if (l.layer5_semantic) {
+        document.getElementById('f-l5-score').innerText = ((l.layer5_semantic.score || 0) * 100).toFixed(1) + '%';
+        document.getElementById('f-l5-wpm').innerText = (l.layer5_semantic.speech_rate_wpm || 0).toFixed(1) + ' WPM';
+        document.getElementById('f-l5-pause').innerText = (l.layer5_semantic.pause_consistency_score || 0).toFixed(2);
+        document.getElementById('f-l5-transcript').innerText = `"${l.layer5_semantic.transcription || 'No speech detected'}"`;
+      }
+      if (l.layer6_watermark) {
+        document.getElementById('f-l6-found').innerText = l.layer6_watermark.found ? "YES (Watermarked)" : "NO (Clean/Human)";
+        document.getElementById('f-l6-conf').innerText = (l.layer6_watermark.confidence || 0).toFixed(2);
+        document.getElementById('f-l6-verdict').innerText = l.layer6_watermark.verdict || '--';
+      }
+
+      document.getElementById('f-raw-json').innerText = JSON.stringify(data, null, 2);
+    }
+  </script>
+</body>
+</html>
+

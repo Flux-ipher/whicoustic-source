@@ -6,6 +6,30 @@ node_modules/
 dist/
 **/dist/
 
+# Python bytecode & caches
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Python virtual environments
+venv/
+.venv/
+env/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Audio test artifacts
+*.wav
+*.mp3
+*.flac
+*.ogg
+dummy_for_watermark_test*
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
@@ -24,12 +48,14 @@ Thumbs.db
 *.zip
 .agents/
 .agent/
-/page.tsx
 
 # Secrets & Environment variables
 .env
 .env.*
 *.env
+firebase-credentials.json
+google-credentials.json
+service-account*.json
 
 # IDE & Editor files
 .vscode/
@@ -40,4 +66,9 @@ Thumbs.db
 /.scratch/
 .npm-cache/
 .npm-global/
+
+# Data & uploads (never commit user audio/data)
+data/
+uploads/
+Training/
 

@@ -64,16 +64,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
       }
     }
-    // Default demo authenticated state for direct sub-domain testing
-    return {
-      id: 'usr_forensic_9921',
-      name: 'Elena Rostova',
-      email: 'elena@acoustic-lab.io',
-      role: 'TALENT',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      vaultKey: 'SHA256:9f8e7d...01bc',
-      isOnboarded: true,
-    };
+    // Strict Real-Data & Security Policy: No unauthenticated access without verification
+    return null;
   });
 
   const [onboardingData, setOnboardingData] = useState<OnboardingData>(() => {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './Button';
-import { RefreshCw, ArrowRight, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react';
+import { RefreshCw, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export interface ErrorStateProps {
@@ -23,7 +23,6 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   illustration,
   title,
   description,
-  solutionSteps = [],
   retryLabel = 'Try Again',
   onRetry,
   isRetrying = false,
@@ -54,26 +53,6 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
           {description}
         </p>
       </div>
-
-      {/* Actionable Next Steps - What to do next */}
-      {solutionSteps.length > 0 && (
-        <div className="w-full text-left bg-surface-container/70 border border-outline-subtle rounded-card p-5 space-y-3">
-          <div className="flex items-center gap-2 text-xs font-berthold font-bold uppercase tracking-wider text-on-surface">
-            <CheckCircle2 className="w-4 h-4 text-primary-container shrink-0" />
-            <span>What to do next</span>
-          </div>
-          <ol className="space-y-2 text-xs sm:text-sm font-berthold text-slate-700">
-            {solutionSteps.map((step, idx) => (
-              <li key={idx} className="flex items-start gap-2.5">
-                <span className="w-5 h-5 rounded-full bg-white border border-outline-subtle text-on-surface flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
-                  {idx + 1}
-                </span>
-                <span className="leading-snug">{step}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
-      )}
 
       {/* Primary & Secondary Action CTAs */}
       <div className="pt-1 flex flex-wrap items-center justify-center gap-3">

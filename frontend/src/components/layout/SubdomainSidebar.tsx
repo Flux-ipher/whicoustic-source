@@ -106,7 +106,7 @@ export const SubdomainSidebar: React.FC = () => {
           className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-pill text-xs font-berthold text-secondary hover:text-on-surface hover:bg-white border border-outline-subtle transition-colors"
         >
           <Globe className="w-3.5 h-3.5 text-primary-container" />
-          <span>Exit to Main Domain (whicoustic.ai)</span>
+          <span>Exit to Main Domain (whicoustic.xyz)</span>
         </button>
 
         {/* Logout */}

@@ -17,7 +17,7 @@ export const LoginPage: React.FC = () => {
     setIsLoading(true);
     try {
       await login(email, password);
-      // login automatically redirects to Sub-domain Dashboard (app.whicoustic.ai/dashboard)
+      // login automatically redirects to Sub-domain Dashboard (app.whicoustic.xyz/dashboard)
     } finally {
       setIsLoading(false);
     }
@@ -30,7 +30,7 @@ export const LoginPage: React.FC = () => {
           Console Login
         </h2>
         <p className="font-berthold text-xs text-slate-600">
-          Enter your credentials to access the platform console (app.whicoustic.ai).
+          Enter your credentials to access the platform console (app.whicoustic.xyz).
         </p>
       </div>
 

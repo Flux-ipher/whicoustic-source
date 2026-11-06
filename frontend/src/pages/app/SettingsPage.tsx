@@ -82,7 +82,7 @@ export const SettingsPage: React.FC = () => {
         </div>
 
         <p className="text-xs font-berthold text-secondary leading-relaxed">
-          Use this secret key in enterprise backend pipelines to request real-time speech synthesis at <code className="font-code text-primary-container">https://api.whicoustic.ai/v1/synthesize</code>.
+          Use this secret key in enterprise backend pipelines to request real-time speech synthesis at <code className="font-code text-primary-container">https://api.whicoustic.xyz/v1/synthesize</code>.
         </p>
 
         <div className="flex items-center gap-3 p-3 bg-surface-container rounded-card border border-outline-subtle">

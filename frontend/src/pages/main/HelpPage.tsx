@@ -42,8 +42,8 @@ const faqs: FAQ[] = [
   },
   {
     category: 'Platform Architecture',
-    q: 'Why does the platform console live on the app.whicoustic.ai sub-domain?',
-    a: 'For enterprise-grade security isolation. The public marketing website (whicoustic.ai) and the authenticated platform console (app.whicoustic.ai) operate with isolated cookie scopes and strict CORS policies to protect your biometric vault keys.',
+    q: 'Why does the platform console live on the app.whicoustic.xyz sub-domain?',
+    a: 'For enterprise-grade security isolation. The public marketing website (whicoustic.xyz) and the authenticated platform console (app.whicoustic.xyz) operate with isolated cookie scopes and strict CORS policies to protect your biometric vault keys.',
   },
 ];
 

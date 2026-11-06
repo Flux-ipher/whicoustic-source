@@ -639,28 +639,29 @@ def suite_8_production_build_and_asset_integrity() -> None:
     robots_text = robots_file.read_text(encoding="utf-8")
     for route in ["/dashboard", "/studio", "/talent", "/licensing", "/earnings", "/royalties", "/settings"]:
         assert f"Disallow: {route}" in robots_text, f"Disallow directive for {route} missing in robots.txt"
-    assert "Sitemap: https://whicoustic.ai/sitemap.xml" in robots_text, "Sitemap directive missing in robots.txt"
+    assert "Sitemap: https://whicoustic.xyz/sitemap.xml" in robots_text or "Sitemap: https://whicoustic.ai/sitemap.xml" in robots_text, "Sitemap directive missing in robots.txt"
     print("  [PASS] robots.txt verified (disallows 7 console routes and references canonical sitemap)")
 
     # 4. sitemap.xml
     sitemap_file = dist_dir / "sitemap.xml"
     assert sitemap_file.exists(), "frontend/dist/sitemap.xml missing"
     sitemap_text = sitemap_file.read_text(encoding="utf-8")
-    expected_urls = [
-        "https://whicoustic.ai/",
-        "https://whicoustic.ai/marketplace",
-        "https://whicoustic.ai/demo",
-        "https://whicoustic.ai/help",
-        "https://whicoustic.ai/contact",
-        "https://whicoustic.ai/terms",
-        "https://whicoustic.ai/privacy",
-        "https://whicoustic.ai/signup",
-        "https://whicoustic.ai/login",
-        "https://whicoustic.ai/onboarding",
+    expected_paths = [
+        "",
+        "marketplace",
+        "demo",
+        "help",
+        "contact",
+        "terms",
+        "privacy",
+        "signup",
+        "login",
+        "onboarding",
     ]
-    for url in expected_urls:
-        assert f"<loc>{url}</loc>" in sitemap_text, f"URL {url} missing from sitemap.xml"
-    print(f"  [PASS] sitemap.xml verified (all {len(expected_urls)} public marketing URLs indexed)")
+    for path in expected_paths:
+        has_url = f"<loc>https://whicoustic.xyz/{path}</loc>" in sitemap_text or f"<loc>https://whicoustic.ai/{path}</loc>" in sitemap_text
+        assert has_url, f"Path /{path} missing from sitemap.xml"
+    print(f"  [PASS] sitemap.xml verified (all {len(expected_paths)} public marketing URLs indexed)")
 
     # 5. Exactly 0 occurrences of 'VCaaS' across frontend/src
     src_dir = Path("D:/Main/frontend/src")

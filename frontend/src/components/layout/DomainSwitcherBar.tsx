@@ -14,7 +14,7 @@ export const DomainSwitcherBar: React.FC = () => {
         </span>
         <span className="text-secondary font-medium">Domain Routing Environment:</span>
         <span className="font-bold text-white tracking-wide">
-          {domain === 'main' ? 'whicoustic.ai (Marketing & Onboarding)' : 'app.whicoustic.ai (Platform Sub-domain)'}
+          {domain === 'main' ? 'whicoustic.xyz (Marketing & Onboarding)' : 'app.whicoustic.xyz (Platform Sub-domain)'}
         </span>
       </div>
 

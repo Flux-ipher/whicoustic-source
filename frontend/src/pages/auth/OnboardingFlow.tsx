@@ -306,7 +306,7 @@ export const OnboardingFlow: React.FC = () => {
 
             {/* Launch Banner to Sub-domain */}
             <div className="p-4 rounded-card bg-amber-50 border border-amber-200 text-xs font-berthold text-[#92400E] space-y-1">
-              <p className="font-bold">Next Stop: Sub-domain Console (app.whicoustic.ai)</p>
+              <p className="font-bold">Next Stop: Sub-domain Console (app.whicoustic.xyz)</p>
               <p className="text-[11px] text-[#92400E]/90">
                 Clicking complete will finalize your identity and route you into your isolated Operations Dashboard on the platform sub-domain.
               </p>

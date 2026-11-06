@@ -35,7 +35,7 @@ export const SubdomainHeader: React.FC = () => {
           {getPageTitle(location.pathname)}
         </h1>
         <p className="font-berthold text-xs text-slate-500">
-          Console Workspace • app.whicoustic.ai
+          Console Workspace • app.whicoustic.xyz
         </p>
       </div>
 

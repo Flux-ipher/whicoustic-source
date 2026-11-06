@@ -37,7 +37,7 @@ import { SettingsPage } from './pages/app/SettingsPage';
 const AppRoutes: React.FC = () => {
   const { isSubdomain } = useDomain();
 
-  // If on Platform Sub-domain (app.localhost:5173 or app.whicoustic.ai):
+  // If on Platform Sub-domain (app.localhost:5173 or app.whicoustic.xyz):
   // The user only accesses the platform console routes!
   if (isSubdomain) {
     return (
@@ -57,7 +57,7 @@ const AppRoutes: React.FC = () => {
     );
   }
 
-  // Otherwise on Main Marketing Domain (localhost:5173 or whicoustic.ai):
+  // Otherwise on Main Marketing Domain (localhost:5173 or whicoustic.xyz):
   return (
     <Routes>
       {/* 1. Public Marketing Shell */}

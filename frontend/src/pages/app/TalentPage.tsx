@@ -109,7 +109,7 @@ export const TalentPage: React.FC = () => {
               Featured Voice Demo Reels
             </h3>
             <p className="font-berthold text-xs text-slate-600">
-              Published on the main domain Voice IP Marketplace (whicoustic.ai/marketplace)
+              Published on the main domain Voice IP Marketplace (whicoustic.xyz/marketplace)
             </p>
           </div>
           <div>

@@ -14,6 +14,9 @@ DEFAULT_ALLOWED_HOSTS = [
     "*.onrender.com",
     "whicoustic.ai",
     "app.whicoustic.ai",
+    "whicoustic.xyz",
+    "app.whicoustic.xyz",
+    "*.whicoustic.xyz",
 ]
 
 # CORS - Handled manually to avoid pydantic parsing issues.
@@ -30,6 +33,8 @@ DEFAULT_ALLOWED_ORIGINS = [
     "https://whicoustic.vercel.app",
     "https://whicoustic.ai",
     "https://app.whicoustic.ai",
+    "https://whicoustic.xyz",
+    "https://app.whicoustic.xyz",
 ]
 
 

@@ -8,4 +8,4 @@ Disallow: /licensing
 Disallow: /earnings
 Disallow: /royalties
 Disallow: /settings
-Sitemap: https://whicoustic.ai/sitemap.xml
+Sitemap: https://whicoustic.xyz/sitemap.xml

@@ -1,5 +1,10 @@
-import firebase_admin
-from firebase_admin import credentials, auth
+try:
+    import firebase_admin
+    from firebase_admin import credentials, auth
+except Exception:
+    firebase_admin = None
+    credentials = None
+    auth = None
 from fastapi import HTTPException, status
 from typing import Optional, Dict, Any
 import jwt
@@ -16,25 +21,30 @@ class AuthService:
     """Firebase Authentication Service"""
     
     def __init__(self):
-        self._initialize_firebase()
+        try:
+            self._initialize_firebase()
+        except Exception:
+            pass
     
     def _initialize_firebase(self):
         """Initialize Firebase Admin SDK"""
-        if not firebase_admin._apps:
+        if firebase_admin and not getattr(firebase_admin, "_apps", None):
+            if not getattr(settings, "FIREBASE_PROJECT_ID", None):
+                return
             # Create Firebase credentials from environment variables
             firebase_config = {
                 "type": "service_account",
                 "project_id": settings.FIREBASE_PROJECT_ID,
                 "private_key_id": settings.FIREBASE_PRIVATE_KEY_ID,
-                "private_key": settings.FIREBASE_PRIVATE_KEY.replace('\\n', '\n'),
+                "private_key": (settings.FIREBASE_PRIVATE_KEY or "").replace('\\n', '\n'),
                 "client_email": settings.FIREBASE_CLIENT_EMAIL,
                 "client_id": settings.FIREBASE_CLIENT_ID,
                 "auth_uri": settings.FIREBASE_AUTH_URI,
                 "token_uri": settings.FIREBASE_TOKEN_URI,
             }
-            
-            cred = credentials.Certificate(firebase_config)
-            firebase_admin.initialize_app(cred)
+            if credentials:
+                cred = credentials.Certificate(firebase_config)
+                firebase_admin.initialize_app(cred)
     
     async def verify_firebase_token(self, id_token: str) -> Dict[str, Any]:
         """Verify Firebase ID token and return decoded token"""

@@ -31,7 +31,7 @@ RUN python -m pip install --upgrade pip --no-cache-dir \
     torch==2.5.1 torchaudio==2.5.1 \
     --index-url https://download.pytorch.org/whl/cpu
 
-# Layer 2: everything else the app needs (sqlalchemy, pydantic, redis, jose, TTS, etc.)
+# Layer 2: everything else the app needs (sqlalchemy, pydantic, redis, jose, TTS, cloud SDKs, etc.)
 # torch is already installed above so pip skips it here
 RUN python -m pip install --no-cache-dir \
     psycopg2-binary==2.9.9 \
@@ -39,6 +39,7 @@ RUN python -m pip install --no-cache-dir \
     sqlalchemy==2.0.52 \
     alembic==1.13.1 \
     aiosqlite \
+    greenlet>=3.0.0 \
     pydantic>=2.5.0 \
     pydantic-settings>=2.1.0 \
     python-jose[cryptography]==3.3.0 \
@@ -49,7 +50,8 @@ RUN python -m pip install --no-cache-dir \
     passlib[bcrypt]==1.7.4 \
     PyJWT==2.8.0 \
     redis==5.0.1 \
-    aiofiles==23.2.0 \
+    aiofiles>=23.2.1 \
+    aiohttp>=3.9.1 \
     loguru==0.7.2 \
     soundfile>=0.12.1 \
     librosa>=0.10.1 \
@@ -59,14 +61,20 @@ RUN python -m pip install --no-cache-dir \
     scikit-learn>=1.3.0 \
     joblib>=1.3.0 \
     email-validator>=2.1.0 \
-    reedsolo \
+    reedsolo>=1.7.0 \
+    resampy>=0.4.2 \
+    firebase-admin==6.3.0 \
+    google-api-python-client>=2.100.0 \
+    google-auth>=2.23.0 \
+    google-auth-httplib2>=0.1.1 \
     "faster-whisper>=0.10.0" \
     "av<14" \
     "websockets>=12.0" \
     TTS==0.22.0 \
     "transformers<5.0,>=4.36.2"
 
-EXPOSE 8000
+ENV PORT=10000
+EXPOSE 10000
 
-# Run the production server
-CMD ["sh", "-c", "python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Run the production server with unbuffered stdout so startup logs show immediately in Render
+CMD ["sh", "-c", "python -u -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}"]

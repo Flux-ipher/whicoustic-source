@@ -9,5 +9,12 @@ export default defineConfig({
     port: 5173,
     // Allow subdomains like app.localhost during local development
     allowedHosts: ['localhost', 'app.localhost', '.localhost'],
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        ws: true,
+      },
+    },
   },
 })

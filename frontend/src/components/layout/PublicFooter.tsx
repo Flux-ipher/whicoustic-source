@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { BrandLogo } from '../ui/BrandLogo';
 import { ShieldCheck, Heart } from 'lucide-react';
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 export const PublicFooter: React.FC = () => {
   return (
     <footer className="bg-white border-t border-outline-subtle pt-16 pb-12 mt-20 text-on-surface">
@@ -95,7 +97,7 @@ export const PublicFooter: React.FC = () => {
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs font-berthold text-secondary gap-4">
           <div className="flex items-center gap-1.5">
-            <span>© {new Date().getFullYear()} Whicoustic Platform Corp. Built with</span>
+            <span>© {CURRENT_YEAR} Whicoustic Platform Corp. Built with</span>
             <Heart className="w-3.5 h-3.5 text-primary-container fill-primary-container" />
             <span>for Voice Rights Holders.</span>
           </div>

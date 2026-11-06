@@ -284,6 +284,7 @@ class VoiceProcessor:
             
             # Extract rhythmic features
             tempo, beats = librosa.beat.beat_track(y=audio, sr=sr)
+            tempo_scalar = float(np.mean(tempo))
             
             # Combine features
             features = np.concatenate([
@@ -292,7 +293,7 @@ class VoiceProcessor:
                 [np.mean(spectral_centroid)],
                 [np.mean(spectral_rolloff)],
                 [np.mean(spectral_bandwidth)],
-                [tempo]
+                [tempo_scalar]
             ])
             
             # Normalize features

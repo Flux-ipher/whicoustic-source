@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -10,13 +9,9 @@ import { PageTransition } from '../../components/ui/PageTransition';
 import { TalentVoiceIllustration, BiometricShieldIllustration } from '../../components/ui/Illustrations';
 import {
   Mic,
-  ShieldCheck,
   CheckCircle2,
-  Sparkles,
   ArrowRight,
   ArrowLeft,
-  Volume2,
-  Lock,
   Layers,
   Sliders,
   Award,

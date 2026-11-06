@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /studio
+Disallow: /talent
+Disallow: /licensing
+Disallow: /earnings
+Disallow: /royalties
+Disallow: /settings
+Sitemap: https://whicoustic.ai/sitemap.xml

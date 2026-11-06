@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { Button } from '../ui/Button';
-import { Bell, Search, ShieldCheck, Zap } from 'lucide-react';
+import { Bell, Search, Zap } from 'lucide-react';
 
 export const SubdomainHeader: React.FC = () => {
   const location = useLocation();

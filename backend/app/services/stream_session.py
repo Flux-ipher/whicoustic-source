@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from collections import deque
 from typing import Any, Dict, Optional
 
@@ -182,7 +183,10 @@ class StreamSession:
 
         # Temporal smoothing (EMA): 500ms cadence uses 0.50/0.50 for agility
         raw_score = verdict["overall_authenticity_score"]
-        watermark_found = layer_results.get("layer6_watermark", {}).get("found", False)
+        watermark_found = (
+            layer_results.get("layer6_watermark", {}).get("found", False)
+            or layer_results.get("watermark", {}).get("found", False)
+        )
         if watermark_found:
             smoothed = 0.0
         elif self._smoothed_authenticity is None:
@@ -192,6 +196,8 @@ class StreamSession:
 
         self._smoothed_authenticity = smoothed
         verdict["overall_authenticity_score"] = smoothed
+        verdict["combined_risk_score"] = round(max(0.0, min(1.0, 1.0 - smoothed)), 4)
+        verdict["timestamp"] = time.time()
 
         open_source_model = layer_results.get("layer1_antispoof", {}).get(
             "open_source_model", {}
@@ -204,20 +210,34 @@ class StreamSession:
 
         if high_confidence_model_fake:
             verdict["overall_authenticity_score"] = min(smoothed, 0.25)
-            verdict["verdict"] = "Deepfake (Open-Source Model)"
+            verdict["combined_risk_score"] = max(verdict["combined_risk_score"], 0.75)
+            detailed = "Deepfake (Open-Source Model)"
+            contract_verdict = "SYNTHETIC"
             verdict["is_authentic"] = False
-        elif not watermark_found:
+        elif watermark_found:
+            detailed = "Deepfake (Watermarked Synthetic)"
+            contract_verdict = "SYNTHETIC"
+            verdict["is_authentic"] = False
+        else:
             if smoothed > 0.8:
-                verdict["verdict"] = "Authentic (Human)"
+                detailed = "Authentic (Human)"
+                contract_verdict = "AUTHENTIC"
             elif smoothed > 0.6:
-                verdict["verdict"] = "Likely Human"
+                detailed = "Likely Human"
+                contract_verdict = "AUTHENTIC"
             elif smoothed > 0.4:
-                verdict["verdict"] = "Unverified / Insufficient Evidence"
+                detailed = "Unverified / Insufficient Evidence"
+                contract_verdict = "SUSPICIOUS"
             elif smoothed > 0.2:
-                verdict["verdict"] = "Suspicious (Likely Synthetic)"
+                detailed = "Suspicious (Likely Synthetic)"
+                contract_verdict = "SUSPICIOUS"
             else:
-                verdict["verdict"] = "Deepfake (Synthetic)"
+                detailed = "Deepfake (Synthetic)"
+                contract_verdict = "SYNTHETIC"
             verdict["is_authentic"] = bool(smoothed > 0.5)
+
+        verdict["verdict"] = contract_verdict
+        verdict["detailed_verdict"] = detailed
 
         # 500ms Cadence & Partial Fake Localization Metadata
         window_start_s = round(max(0.0, (self.total_samples_received - window_len) / self.sample_rate), 2)
@@ -227,6 +247,7 @@ class StreamSession:
         verdict["samples_processed"] = self.total_samples_received
         verdict["cadence_ms"] = 500
         verdict["window_start_s"] = window_start_s
+        window_end_s = round(self.total_samples_received / self.sample_rate, 2)
         verdict["window_end_s"] = window_end_s
         verdict["is_telephony"] = self.is_telephony
         verdict["segment_label"] = "REAL" if smoothed >= 0.5 else "FAKE"

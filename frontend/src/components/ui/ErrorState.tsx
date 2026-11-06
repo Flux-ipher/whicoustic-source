@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './Button';
-import { RefreshCw, ArrowRight, HelpCircle, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react';
+import { RefreshCw, ArrowRight, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export interface ErrorStateProps {

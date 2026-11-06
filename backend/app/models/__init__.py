@@ -7,6 +7,7 @@ from .voice import Voice, VoiceSample, VoiceStatus, VoiceQuality
 from .license import License
 from .watermark import WatermarkVerification
 from .usage_log import UsageLog, LicenseUsage
+from .escrow import EscrowDisbursement
 
 __all__ = [
     "User",
@@ -18,5 +19,6 @@ __all__ = [
     "WatermarkVerification",
     "UsageLog",
     "LicenseUsage",
+    "EscrowDisbursement",
 ]
 

@@ -26,6 +26,15 @@ from ...schemas.license import (
     LicenseTokenResponse,
     LicenseUsageResponse
 )
+from ...services.escrow_service import EscrowService
+from ...schemas.escrow import (
+    LicenseDisbursementsResponse,
+    DisbursementCreateRequest,
+    DisbursementItemResponse,
+    PlaybackRoyaltySplitRequest,
+    PlaybackRoyaltySplitResponse,
+    EscrowSummaryResponse,
+)
 
 router = APIRouter(prefix="/licenses", tags=["licensing"])
 
@@ -474,3 +483,119 @@ async def browse_marketplace_licenses(
         }
         for license in licenses
     ]
+
+
+@router.get("/{license_id}/disbursements", response_model=LicenseDisbursementsResponse)
+@router.get("/{id}/disbursements", response_model=LicenseDisbursementsResponse, include_in_schema=False)
+async def get_license_disbursements_endpoint(
+    license_id: Optional[str] = None,
+    id: Optional[str] = None,
+    status: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get escrow disbursement details and royalty calculations for a voice license.
+    Calculates gross escrow, platform fee (15%), net creator disbursement (85%),
+    and returns breakdown of settled, pending, and disputed royalty streams.
+    Conforms to PROJECT.md § Backend Escrow Disbursement Contract.
+    """
+    target_id = license_id or id
+    if not target_id:
+        raise HTTPException(status_code=400, detail="License ID is required")
+
+    # Verify license exists
+    license = db.query(License).filter(License.id == target_id).first()
+    if not license:
+        raise HTTPException(
+            status_code=404,
+            detail="License not found"
+        )
+
+    # Verify access: licensor/creator or authorized user
+    if license.user_id != current_user.id and not getattr(current_user, "is_superuser", False):
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied to license disbursement records"
+        )
+
+    escrow_service = EscrowService(db)
+    result = escrow_service.get_license_disbursements(license_id=target_id, status=status)
+    return result
+
+
+@router.post("/{license_id}/disbursements", response_model=DisbursementItemResponse)
+async def create_license_disbursement_endpoint(
+    license_id: str,
+    payload: DisbursementCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Record a new disbursement in escrow for a license."""
+    license = db.query(License).filter(License.id == license_id).first()
+    if not license:
+        raise HTTPException(status_code=404, detail="License not found")
+
+    if license.user_id != current_user.id and not getattr(current_user, "is_superuser", False):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    escrow_service = EscrowService(db)
+    disb = escrow_service.create_disbursement(
+        license_id=license_id,
+        royalty_stream=payload.royalty_stream,
+        licensee=payload.licensee,
+        gross_amount=payload.gross_amount,
+        status=payload.status,
+        playback_seconds=payload.playback_seconds,
+        rate_per_second=payload.rate_per_second,
+        tx_hash=payload.tx_hash,
+        payment_method=payload.payment_method
+    )
+    return DisbursementItemResponse(
+        id=disb.id,
+        royalty_stream=disb.royalty_stream,
+        licensee=disb.licensee,
+        gross_amount=disb.gross_amount,
+        platform_fee=disb.platform_fee,
+        net_amount=disb.net_amount,
+        status=disb.status,
+        disbursed_at=disb.disbursed_at.isoformat() + "Z" if disb.disbursed_at else None
+    )
+
+
+@router.post("/{license_id}/calculate-split", response_model=PlaybackRoyaltySplitResponse)
+async def calculate_playback_royalty_split_endpoint(
+    license_id: str,
+    payload: PlaybackRoyaltySplitRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Calculate per-second playback royalty splits and fee deductions."""
+    license = db.query(License).filter(License.id == license_id).first()
+    if not license:
+        raise HTTPException(status_code=404, detail="License not found")
+
+    escrow_service = EscrowService(db)
+    return escrow_service.calculate_playback_split(
+        duration_seconds=payload.duration_seconds,
+        rate_per_second=payload.rate_per_second,
+        platform_fee_percent=payload.platform_fee_percent
+    )
+
+
+@router.get("/{license_id}/escrow-summary", response_model=EscrowSummaryResponse)
+async def get_license_escrow_summary_endpoint(
+    license_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get aggregated escrow balances broken down by settled, pending, and disputed statuses."""
+    license = db.query(License).filter(License.id == license_id).first()
+    if not license:
+        raise HTTPException(status_code=404, detail="License not found")
+
+    if license.user_id != current_user.id and not getattr(current_user, "is_superuser", False):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    escrow_service = EscrowService(db)
+    return escrow_service.get_escrow_summary(license_id=license_id)

@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
 import { PageTransition } from '../../components/ui/PageTransition';
 import { BiometricShieldIllustration } from '../../components/ui/Illustrations';
-import { ShieldCheck, Key, Copy, Check, RefreshCw, Lock, AlertTriangle } from 'lucide-react';
+import { Key, Copy, Check, RefreshCw, Lock } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
   const [copiedKey, setCopiedKey] = useState(false);

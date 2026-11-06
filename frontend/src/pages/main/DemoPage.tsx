@@ -18,7 +18,7 @@ import {
   Play,
 } from 'lucide-react';
 import { ErrorState } from '../../components/ui/ErrorState';
-import { MicBlockedIllustration } from '../../components/ui/Illustrations';
+import { MicBlockedIllustration, ConnectionLostIllustration } from '../../components/ui/Illustrations';
 import { MicrophoneTroubleshooterModal } from '../../components/ui/MicrophoneTroubleshooterModal';
 import { PageTransition } from '../../components/ui/PageTransition';
 import { Button } from '../../components/ui/Button';
@@ -316,7 +316,7 @@ export const DemoPage: React.FC = () => {
   const [history, setHistory] = useState<Verdict[]>([]);
   const [layersOpen, setLayersOpen] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [micDenied, setMicDenied] = useState(false);
+  const [_micDenied, setMicDenied] = useState(false);
   const [showMicModal, setShowMicModal] = useState(false);
   const [volumeLevel, setVolumeLevel] = useState<number>(0);
   const [simulationMode, setSimulationMode] = useState<'HUMAN' | 'AI_ATTACK'>('HUMAN');
@@ -482,11 +482,13 @@ export const DemoPage: React.FC = () => {
         };
 
         ws.onerror = () => {
-          // If backend WebSocket is not running, transition gracefully to Real-Time Local Emulation
+          // Strict Real-Data Policy: Eliminate silent fallback to simulated verdict.
+          // Transition to ErrorState indicating verification stream is unreachable.
           if (!wsConnectedRef.current) {
-            console.info('Backend WebSocket offline — switching to 6-Layer Engine Local Telemetry Mode');
-            setWsState('simulated');
-            startLocalAnalysisLoop();
+            setError('Verification WebSocket stream unreachable at /api/v1/verify/stream. Please ensure the Whicoustic backend server is running.');
+            setWsState('closed');
+            setListening(false);
+            teardown();
           }
         };
 
@@ -512,10 +514,12 @@ export const DemoPage: React.FC = () => {
             }
           };
         }
-      } catch {
-        // Fallback to local mode
-        setWsState('simulated');
-        startLocalAnalysisLoop();
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(`Failed to connect to verification stream: ${msg}`);
+        setWsState('closed');
+        setListening(false);
+        teardown();
       }
 
       setListening(true);
@@ -527,7 +531,7 @@ export const DemoPage: React.FC = () => {
       setListening(false);
       setWsState('idle');
     }
-  }, [teardown, startLocalAnalysisLoop]);
+  }, [teardown]);
 
   /* Start simulated acoustic stream directly (bypasses mic if blocked or unavailable) */
   const startSimulatedStream = useCallback(() => {
@@ -697,16 +701,41 @@ export const DemoPage: React.FC = () => {
                   className="p-5 bg-red-50/60 border border-red-200/80 rounded-card my-2 text-left"
                 >
                   <ErrorState
-                    illustration={<MicBlockedIllustration size={130} />}
-                    title="Microphone Access Blocked or Not Detected"
-                    description="The acoustic engine requires microphone input to evaluate glottal waveform, ultrasonic steganography, and vocal fold dynamics in real time."
-                    solutionSteps={[
-                      'Click the lock or camera icon on the left side of your browser URL bar.',
-                      'Change Microphone permission from "Block" to "Allow".',
-                      'Verify your microphone is plugged in and unmuted in your system audio settings.',
-                      'Or, start the Simulated Acoustic Stream below to test the 6-layer defense system immediately.',
-                    ]}
-                    retryLabel="Retry Microphone"
+                    illustration={
+                      error.includes('WebSocket') || error.includes('stream') || error.includes('unreachable') ? (
+                        <ConnectionLostIllustration size={130} />
+                      ) : (
+                        <MicBlockedIllustration size={130} />
+                      )
+                    }
+                    title={
+                      error.includes('WebSocket') || error.includes('stream') || error.includes('unreachable')
+                        ? 'Forensic Verification Stream Unreachable'
+                        : 'Microphone Access Blocked or Not Detected'
+                    }
+                    description={
+                      error.includes('WebSocket') || error.includes('stream') || error.includes('unreachable')
+                        ? error
+                        : 'The acoustic engine requires microphone input to evaluate glottal waveform, ultrasonic steganography, and vocal fold dynamics in real time.'
+                    }
+                    solutionSteps={
+                      error.includes('WebSocket') || error.includes('stream') || error.includes('unreachable')
+                        ? [
+                            'Ensure the Whicoustic backend FastAPI server is running on http://localhost:8000.',
+                            'Verify WebSocket route /api/v1/verify/stream is accessible and unobstructed by local proxy.',
+                            'Click the retry button below once the backend stream service is active.',
+                          ]
+                        : [
+                            'Click the lock or camera icon on the left side of your browser URL bar.',
+                            'Change Microphone permission from "Block" to "Allow".',
+                            'Verify your microphone is plugged in and unmuted in your system audio settings.',
+                          ]
+                    }
+                    retryLabel={
+                      error.includes('WebSocket') || error.includes('stream') || error.includes('unreachable')
+                        ? 'Retry Stream Connection'
+                        : 'Retry Microphone'
+                    }
                     onRetry={start}
                     secondaryLabel="How to Unblock in Browser"
                     onSecondaryAction={() => setShowMicModal(true)}

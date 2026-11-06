@@ -349,7 +349,7 @@ export function useMicrophoneAnalysis() {
         };
       }
     });
-  }, [simulationMode]);
+  }, []);
 
   useEffect(() => {
     return () => {

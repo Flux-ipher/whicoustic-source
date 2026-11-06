@@ -13,7 +13,6 @@ import {
   ShieldAlert,
   LogOut,
   Globe,
-  Sparkles,
 } from 'lucide-react';
 
 export const SubdomainSidebar: React.FC = () => {

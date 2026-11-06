@@ -10,6 +10,7 @@ export interface User {
   vaultKey?: string;
   isOnboarded: boolean;
   dob?: string;
+  token?: string;
 }
 
 export interface OnboardingData {
@@ -59,7 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (saved) {
       try {
         return JSON.parse(saved);
-      } catch (e) {
+      } catch {
         return null;
       }
     }
@@ -80,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (saved) {
       try {
         return JSON.parse(saved);
-      } catch (e) {
+      } catch {
         return defaultOnboarding;
       }
     }
@@ -98,62 +99,110 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signup = async (email: string, password?: string, name?: string, dob?: string) => {
     localStorage.removeItem('whicoustic_logged_out');
 
-    try {
-      const response = await fetch('/api/v1/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: email.split('@')[0].replace(/[^a-zA-Z0-9_-]/g, '_') || 'user',
-          email,
-          password: password || 'DefaultPassword123!',
-          full_name: name || email.split('@')[0],
-          dob,
-        }),
-      });
+    const response = await fetch('/api/v1/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        username: email.split('@')[0].replace(/[^a-zA-Z0-9_-]/g, '_') || 'user',
+        email,
+        password: password || 'DefaultPassword123!',
+        full_name: name || email.split('@')[0],
+        dob,
+      }),
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        if (response.status === 422 || response.status === 400) {
-          const detail = errorData.detail;
-          if (Array.isArray(detail)) {
-            const msgs = detail.map((d: { msg?: string }) => d.msg || '').join(', ');
-            throw new Error(msgs || 'Registration compliance validation failed.');
-          } else if (typeof detail === 'string') {
-            throw new Error(detail);
-          }
-        }
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      let msg = 'Registration compliance validation failed.';
+      const detail = errorData.detail;
+      if (Array.isArray(detail)) {
+        msg = detail.map((d: { msg?: string }) => d.msg || '').join(', ');
+      } else if (typeof detail === 'string') {
+        msg = detail;
       }
-    } catch (err: unknown) {
-      if (err instanceof Error && err.message.includes('17 years old')) {
-        throw err;
-      }
-      console.warn('Backend registration API note:', err);
+      throw new Error(msg);
     }
 
+    const regUser = await response.json().catch(() => ({}));
+
     const newUser: User = {
-      id: `usr_${Math.random().toString(36).substring(2, 9)}`,
-      name: name || email.split('@')[0],
-      email,
+      id: regUser.id ? String(regUser.id) : `usr_${Math.random().toString(36).substring(2, 9)}`,
+      name: regUser.full_name || name || email.split('@')[0],
+      email: regUser.email || email,
       role: 'TALENT',
       isOnboarded: false,
-      dob,
+      dob: regUser.dob || dob,
     };
     setUser(newUser);
     localStorage.setItem('whicoustic_user', JSON.stringify(newUser));
   };
 
-  const login = async (email: string, _password?: string) => {
+  const login = async (email: string, password?: string) => {
     localStorage.removeItem('whicoustic_logged_out');
+    const pwd = password || 'DefaultPassword123!';
+
+    const response = await fetch('/api/v1/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        password: pwd,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      let msg = 'Authentication failed. Please verify your email and password.';
+      const detail = errorData.detail;
+      if (typeof detail === 'string') {
+        msg = detail;
+      } else if (Array.isArray(detail)) {
+        msg = detail.map((d: { msg?: string }) => d.msg || '').join(', ');
+      }
+      throw new Error(msg);
+    }
+
+    const tokenData = await response.json().catch(() => ({}));
+    if (tokenData.access_token) {
+      localStorage.setItem('whicoustic_token', tokenData.access_token);
+    }
+
+    let profile: Partial<User> = {};
+    if (tokenData.access_token) {
+      try {
+        const profRes = await fetch('/api/v1/auth/profile', {
+          headers: {
+            Authorization: `Bearer ${tokenData.access_token}`,
+          },
+        });
+        if (profRes.ok) {
+          const profData = await profRes.json();
+          profile = {
+            id: String(profData.id),
+            name: profData.full_name || profData.username,
+            email: profData.email,
+            dob: profData.dob,
+          };
+        }
+      } catch {
+        // Fallback to minimal profile if network glitch
+      }
+    }
+
     const loggedInUser: User = {
-      id: 'usr_forensic_9921',
-      name: email.split('@')[0],
-      email,
+      id: profile.id || 'usr_forensic_9921',
+      name: profile.name || email.split('@')[0],
+      email: profile.email || email,
       role: 'TALENT',
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
       vaultKey: 'SHA256:9f8e7d...01bc',
       isOnboarded: true,
+      dob: profile.dob,
+      token: tokenData.access_token,
     };
     setUser(loggedInUser);
     localStorage.setItem('whicoustic_user', JSON.stringify(loggedInUser));
@@ -190,6 +239,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem('whicoustic_user');
+    localStorage.removeItem('whicoustic_token');
     localStorage.setItem('whicoustic_logged_out', 'true');
     navigateToMainDomain('/');
   };

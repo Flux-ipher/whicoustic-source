@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { StatCard } from '../../components/ui/StatCard';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { ErrorState } from '../../components/ui/ErrorState';
 import { WaveformVisualizer } from '../../components/ui/WaveformVisualizer';
 import { PageTransition } from '../../components/ui/PageTransition';
-import { mockDashboardMetrics, mockRecentActivity, mockThroughputData } from '../../data/mock/dashboard';
+import { ConnectionLostIllustration } from '../../components/ui/Illustrations';
+import { dashboardService, DashboardOverview } from '../../services/dashboardService';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 import {
   Mic2,
@@ -14,12 +16,72 @@ import {
   Activity,
   Zap,
   ArrowUpRight,
-  ShieldCheck,
   TrendingUp,
+  Loader2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+const KPI_ICONS = [
+  <Mic2 key="mic" className="w-4 h-4" />,
+  <FileCheck2 key="file" className="w-4 h-4" />,
+  <DollarSign key="dollar" className="w-4 h-4" />,
+  <Activity key="activity" className="w-4 h-4" />,
+];
+
 export const DashboardPage: React.FC = () => {
+  const [data, setData] = useState<DashboardOverview | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchDashboard = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await dashboardService.getDashboardOverview();
+      setData(result);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unable to retrieve dashboard metrics from Whicoustic API.';
+      setError(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDashboard();
+  }, [fetchDashboard]);
+
+  if (isLoading) {
+    return (
+      <PageTransition className="py-24 flex flex-col items-center justify-center space-y-3">
+        <Loader2 className="w-8 h-8 text-primary-container animate-spin" />
+        <p className="text-sm font-berthold text-slate-600">Gathering cryptographic telemetry from edge clusters...</p>
+      </PageTransition>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <PageTransition className="py-12">
+        <ErrorState
+          illustration={<ConnectionLostIllustration size={180} />}
+          title="Telemetry Feed Offline"
+          description={error || 'Unable to establish connection with Whicoustic telemetry aggregator.'}
+          solutionSteps={[
+            'Verify the backend FastAPI server is running on http://localhost:8000.',
+            'Ensure database and caching services are active.',
+            'Click the retry button below to re-synchronize live metrics.',
+          ]}
+          retryLabel="Retry Telemetry Connection"
+          onRetry={fetchDashboard}
+          technicalError={error || undefined}
+        />
+      </PageTransition>
+    );
+  }
+
+  const { metrics, throughputData, recentActivity } = data;
+
   return (
     <PageTransition className="space-y-8 pb-10">
       {/* 1. KPI Stats Grid */}
@@ -35,38 +97,17 @@ export const DashboardPage: React.FC = () => {
         }}
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
       >
-        <StatCard
-          label="Active Voice Clones"
-          value={mockDashboardMetrics[0].value}
-          change={mockDashboardMetrics[0].change}
-          trend={mockDashboardMetrics[0].trend}
-          caption={mockDashboardMetrics[0].caption}
-          icon={<Mic2 className="w-4 h-4" />}
-        />
-        <StatCard
-          label="Studio Licenses"
-          value={mockDashboardMetrics[1].value}
-          change={mockDashboardMetrics[1].change}
-          trend={mockDashboardMetrics[1].trend}
-          caption={mockDashboardMetrics[1].caption}
-          icon={<FileCheck2 className="w-4 h-4" />}
-        />
-        <StatCard
-          label="Monthly Royalty Escrow"
-          value={mockDashboardMetrics[2].value}
-          change={mockDashboardMetrics[2].change}
-          trend={mockDashboardMetrics[2].trend}
-          caption={mockDashboardMetrics[2].caption}
-          icon={<DollarSign className="w-4 h-4" />}
-        />
-        <StatCard
-          label="Synthesis Volume"
-          value={mockDashboardMetrics[3].value}
-          change={mockDashboardMetrics[3].change}
-          trend={mockDashboardMetrics[3].trend}
-          caption={mockDashboardMetrics[3].caption}
-          icon={<Activity className="w-4 h-4" />}
-        />
+        {metrics.map((m, idx) => (
+          <StatCard
+            key={m.label}
+            label={m.label}
+            value={m.value}
+            change={m.change}
+            trend={m.trend}
+            caption={m.caption}
+            icon={KPI_ICONS[idx % KPI_ICONS.length]}
+          />
+        ))}
       </motion.div>
 
       {/* 2. Real-Time Telemetry & Throughput Chart */}
@@ -90,7 +131,7 @@ export const DashboardPage: React.FC = () => {
 
             <div className="h-64 w-full pt-4">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={mockThroughputData}>
+                <AreaChart data={throughputData}>
                   <defs>
                     <linearGradient id="amberGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.4} />
@@ -120,9 +161,9 @@ export const DashboardPage: React.FC = () => {
             </div>
 
             <div className="flex items-center justify-between text-xs font-berthold pt-3 border-t border-outline-subtle text-secondary">
-              <span>Peak Throughput: 840 req/min</span>
+              <span>Edge Capacity: Monitored</span>
               <span className="flex items-center gap-1.5 text-emerald-700 font-semibold">
-                <TrendingUp className="w-3.5 h-3.5" /> 99.98% Model Health
+                <TrendingUp className="w-3.5 h-3.5" /> {data.verificationSuccessRate}% Telemetry Health
               </span>
             </div>
           </Card>
@@ -175,22 +216,28 @@ export const DashboardPage: React.FC = () => {
               </Link>
             </div>
 
-            <div className="divide-y divide-outline-subtle">
-              {mockRecentActivity.map((act) => (
-                <div key={act.id} className="py-3.5 flex items-center justify-between text-xs font-berthold">
-                  <div className="space-y-0.5">
-                    <p className="font-bold text-on-surface">{act.event}</p>
-                    <p className="text-secondary">{act.target}</p>
+            {recentActivity.length === 0 ? (
+              <div className="py-8 text-center text-xs font-berthold text-secondary">
+                No recent cryptographic events recorded. Upload audio in Voice Studio or create a license to begin auditing.
+              </div>
+            ) : (
+              <div className="divide-y divide-outline-subtle">
+                {recentActivity.map((act) => (
+                  <div key={act.id} className="py-3.5 flex items-center justify-between text-xs font-berthold">
+                    <div className="space-y-0.5">
+                      <p className="font-bold text-on-surface">{act.event}</p>
+                      <p className="text-secondary">{act.target}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-medium text-slate-700 bg-surface-container px-2 py-0.5 rounded-pill border border-outline-subtle">
+                        {act.badge}
+                      </span>
+                      <span className="text-secondary/70 text-[11px] font-code">{act.time}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-medium text-slate-700">
-                      {act.badge}
-                    </span>
-                    <span className="text-secondary/70 text-[11px] font-code">{act.time}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </Card>
         </div>
 
@@ -229,4 +276,3 @@ export const DashboardPage: React.FC = () => {
     </PageTransition>
   );
 };
-

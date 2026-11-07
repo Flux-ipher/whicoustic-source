@@ -520,21 +520,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    if (user) {
-      const shortVault = rawVaultKey.startsWith('SHA256:')
-        ? `${rawVaultKey.substring(0, 19)}...`
-        : `SHA256:${rawVaultKey.substring(0, 12)}...`;
-
-      const updatedUser: User = {
-        ...user,
-        isOnboarded: true,
-        vaultKey: shortVault,
-      };
-      setUser(updatedUser);
-      localStorage.setItem('whicoustic_user', JSON.stringify(updatedUser));
-      if (token) {
-        setSessionCookie(updatedUser, token);
+    // Resolve current base user object from state, local storage, or current auth token
+    let baseUser: User | null = user;
+    if (!baseUser) {
+      try {
+        const stored = localStorage.getItem('whicoustic_user');
+        if (stored) {
+          baseUser = JSON.parse(stored) as User;
+        }
+      } catch {
+        // Ignore JSON error
       }
+    }
+
+    if (!baseUser && auth?.currentUser) {
+      baseUser = {
+        id: auth.currentUser.uid,
+        name: auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'User',
+        email: auth.currentUser.email || '',
+        role: 'TALENT',
+        avatar: auth.currentUser.photoURL || undefined,
+        isOnboarded: false,
+        token: token || undefined,
+      };
+    }
+
+    const shortVault = rawVaultKey.startsWith('SHA256:')
+      ? `${rawVaultKey.substring(0, 19)}...`
+      : `SHA256:${rawVaultKey.substring(0, 12)}...`;
+
+    const updatedUser: User = baseUser ? {
+      ...baseUser,
+      isOnboarded: true,
+      vaultKey: shortVault,
+      token: token || baseUser.token,
+    } : {
+      id: auth?.currentUser?.uid || 'usr_onboarded',
+      name: auth?.currentUser?.displayName || 'User',
+      email: auth?.currentUser?.email || '',
+      role: 'TALENT',
+      isOnboarded: true,
+      vaultKey: shortVault,
+      token: token || undefined,
+    };
+
+    setUser(updatedUser);
+    localStorage.setItem('whicoustic_user', JSON.stringify(updatedUser));
+    if (token) {
+      setSessionCookie(updatedUser, token);
     }
 
     navigateToSubdomain('/dashboard');

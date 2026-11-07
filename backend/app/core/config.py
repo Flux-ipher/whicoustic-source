@@ -92,7 +92,13 @@ class Settings(BaseSettings):
     REDIS_URL: str = Field(default="redis://localhost:6379", env="REDIS_URL")
 
     # Firebase Configuration
-    FIREBASE_PROJECT_ID: str = Field(default="whicoustic", env="FIREBASE_PROJECT_ID")
+    FIREBASE_PROJECT_ID: str = Field(default="", env="FIREBASE_PROJECT_ID")
+    FIREBASE_API_KEY: str = Field(default="", env="FIREBASE_API_KEY")
+    FIREBASE_AUTH_DOMAIN: str = Field(default="", env="FIREBASE_AUTH_DOMAIN")
+    FIREBASE_STORAGE_BUCKET: str = Field(default="", env="FIREBASE_STORAGE_BUCKET")
+    FIREBASE_MESSAGING_SENDER_ID: str = Field(default="", env="FIREBASE_MESSAGING_SENDER_ID")
+    FIREBASE_APP_ID: str = Field(default="", env="FIREBASE_APP_ID")
+    FIREBASE_MEASUREMENT_ID: str = Field(default="", env="FIREBASE_MEASUREMENT_ID")
     FIREBASE_PRIVATE_KEY_ID: str = Field(default="dummy", env="FIREBASE_PRIVATE_KEY_ID")
     FIREBASE_PRIVATE_KEY: str = Field(default="dummy", env="FIREBASE_PRIVATE_KEY")
     FIREBASE_CLIENT_EMAIL: str = Field(default="dummy", env="FIREBASE_CLIENT_EMAIL")

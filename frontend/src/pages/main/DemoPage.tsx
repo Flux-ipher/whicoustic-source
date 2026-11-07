@@ -822,12 +822,8 @@ export const DemoPage: React.FC = () => {
                   <span className="font-berthold text-slate-500">Waiting for microphone audio stream…</span>
                 </motion.div>
               ) : (
-                <motion.div
-                  key={`${latest.overall_authenticity_score}-${latest.samples_processed ?? 0}`}
-                  initial={{ opacity: 0, scale: 0.96 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.96 }}
-                  transition={{ duration: 0.3 }}
+                <div
+                  key="verdict-active"
                   className="ld-verdict-content"
                 >
                   {/* Score ring */}
@@ -908,7 +904,7 @@ export const DemoPage: React.FC = () => {
                       </AnimatePresence>
                     </div>
                   )}
-                </motion.div>
+                </div>
               )}
             </AnimatePresence>
           </motion.section>

@@ -6,7 +6,7 @@ Handles Supabase PostgreSQL connection with resilient automatic fallback to SQLi
 from sqlalchemy import create_engine, MetaData, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base, sessionmaker
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import NullPool, StaticPool
 from typing import AsyncGenerator, Generator, Tuple, Optional
 import logging
 from app.core.config import settings
@@ -48,20 +48,28 @@ def _resolve_target_urls() -> Tuple[Optional[str], Optional[str]]:
 
 
 def _create_sqlite_engines(db_url: Optional[str] = None):
-    """Create local SQLite sync and async engines."""
+    """Create local SQLite sync and async engines with thread-safe pooling."""
     async_url = db_url or SQLITE_ASYNC_URL
     sync_url = async_url.replace("+aiosqlite", "")
+
+    # For in-memory databases, StaticPool is required to retain state across sessions.
+    # For file-based SQLite databases, NullPool creates dedicated connections per session,
+    # eliminating thread cursor corruption under FastAPI worker pools.
+    is_memory = ":memory:" in sync_url
+    pool_class = StaticPool if is_memory else NullPool
+    connect_args = {"check_same_thread": False, "timeout": 30.0}
 
     a_eng = create_async_engine(
         async_url,
         echo=settings.DEBUG,
-        connect_args={"check_same_thread": False},
+        connect_args=connect_args,
+        poolclass=pool_class,
         pool_pre_ping=True,
     )
     s_eng = create_engine(
         sync_url,
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
+        connect_args=connect_args,
+        poolclass=pool_class,
         echo=settings.DEBUG,
     )
     return a_eng, s_eng, "sqlite"

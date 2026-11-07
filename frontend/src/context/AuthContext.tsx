@@ -10,18 +10,17 @@ import {
 import { auth, googleProvider, githubProvider } from '../config/firebase';
 import { useDomain } from './DomainContext';
 import { getApiBaseUrl } from '../services/apiClient';
+import {
+  extractAndCleanSessionHandoff,
+  type SessionUser,
+} from '../utils/authHandoff';
+import {
+  getSessionCookie,
+  setSessionCookie,
+  clearSessionCookie,
+} from '../utils/cookies';
 
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: 'TALENT' | 'STUDIO' | 'ENTERPRISE';
-  avatar?: string;
-  vaultKey?: string;
-  isOnboarded: boolean;
-  dob?: string;
-  token?: string;
-}
+export type User = SessionUser;
 
 export interface OnboardingData {
   role: string;
@@ -33,15 +32,22 @@ export interface OnboardingData {
   royaltyFloorPct: number;
 }
 
+export interface OnboardingPreferences {
+  royalty_floor_pct?: number;
+  voice_category?: string;
+  vault_key?: string;
+}
+
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   onboardingData: OnboardingData;
   updateOnboardingData: (data: Partial<OnboardingData>) => void;
   signup: (email: string, password?: string, name?: string, dob?: string) => Promise<void>;
   login: (email: string, password?: string) => Promise<void>;
   loginWithOAuth: (provider: 'google' | 'github') => Promise<void>;
-  completeOnboarding: () => void;
+  completeOnboarding: (data?: OnboardingPreferences) => Promise<void>;
   logout: () => void;
 }
 
@@ -84,6 +90,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { navigateToSubdomain, navigateToMainDomain } = useDomain();
 
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
   const [user, setUser] = useState<User | null>(() => {
     // If explicitly logged out, do not revive session
     if (localStorage.getItem('whicoustic_logged_out') === 'true') {
@@ -113,6 +121,164 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return defaultOnboarding;
   });
 
+  // Multi-tier session hydration on mount:
+  // Tier 1: URL Hash Fragment (#session_handoff=<base64url>) [Highest Priority - overrides stale logout]
+  // Query Param: ?logged_out=true [Cross-origin logout synchronization]
+  // Stored Flag: whicoustic_logged_out === 'true' [Blocks auto-resurrection from stale cookie/storage]
+  // Tier 2: Domain-Scoped Cookie (whicoustic_session)
+  // Tier 3: Origin Local Storage (whicoustic_user)
+  useEffect(() => {
+    const hydrateSession = () => {
+      // Tier 1: Check URL hash handoff fragment FIRST!
+      // A cryptographically fresh URL hash handoff represents an active cross-origin authentication
+      // event and MUST take precedence over any stale origin-partitioned logout flag.
+      try {
+        const handoff = extractAndCleanSessionHandoff();
+        if (handoff && handoff.user && handoff.token) {
+          localStorage.setItem('whicoustic_user', JSON.stringify(handoff.user));
+          localStorage.setItem('whicoustic_token', handoff.token);
+          localStorage.removeItem('whicoustic_logged_out');
+          setSessionCookie(handoff.user, handoff.token);
+          setUser(handoff.user);
+          setIsLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.warn('Tier 1 hash handoff hydration error:', err);
+      }
+
+      // Check URL query parameters for explicit cross-origin logout signal (?logged_out=true)
+      if (typeof window !== 'undefined' && window.location) {
+        try {
+          const search = window.location.search;
+          if (search && search.includes('logged_out=true')) {
+            localStorage.setItem('whicoustic_logged_out', 'true');
+            localStorage.removeItem('whicoustic_user');
+            localStorage.removeItem('whicoustic_token');
+            clearSessionCookie();
+            const params = new URLSearchParams(search);
+            params.delete('logged_out');
+            const newSearch = params.toString() ? `?${params.toString()}` : '';
+            const cleanUrl = window.location.pathname + newSearch + window.location.hash;
+            if (window.history && window.history.replaceState) {
+              window.history.replaceState(window.history.state, '', cleanUrl);
+            }
+            setUser(null);
+            setIsLoading(false);
+            return;
+          }
+        } catch (err) {
+          console.warn('URL logout parameter extraction error:', err);
+        }
+      }
+
+      // If user explicitly logged out in this browser AND no fresh incoming handoff exists,
+      // prevent auto-resurrection from stale cookies or stale storage.
+      if (localStorage.getItem('whicoustic_logged_out') === 'true') {
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+
+      // Tier 2: Check Domain-Scoped Cookie
+      try {
+        const cookieSession = getSessionCookie();
+        if (cookieSession && cookieSession.user && cookieSession.token) {
+          localStorage.setItem('whicoustic_user', JSON.stringify(cookieSession.user));
+          localStorage.setItem('whicoustic_token', cookieSession.token);
+          localStorage.removeItem('whicoustic_logged_out');
+          setUser(cookieSession.user);
+          setIsLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.warn('Tier 2 cookie hydration error:', err);
+      }
+
+      // Tier 3: Check Local Storage
+      try {
+        const saved = localStorage.getItem('whicoustic_user');
+        const token = localStorage.getItem('whicoustic_token');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.id && parsed.email) {
+            setUser(parsed);
+            if (token) {
+              setSessionCookie(parsed, token);
+            }
+            setIsLoading(false);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Tier 3 localStorage hydration error:', err);
+      }
+
+      // Unauthenticated state
+      setUser(null);
+      setIsLoading(false);
+    };
+
+    hydrateSession();
+  }, []);
+
+  interface BackendSyncExtraData {
+    is_onboarded?: boolean;
+    royalty_floor_pct?: number;
+    voice_category?: string;
+    vault_key?: string;
+    provider_id?: string;
+  }
+
+  const syncWithBackend = async (
+    token: string,
+    fbUser: { uid: string; email: string | null; displayName: string | null; photoURL: string | null },
+    name?: string,
+    extraData?: BackendSyncExtraData
+  ) => {
+    const apiBase = getApiBaseUrl();
+    try {
+      const syncPayload: Record<string, any> = {
+        uid: fbUser.uid || undefined,
+        email: fbUser.email || undefined,
+        name: name || fbUser.displayName || (fbUser.email ? fbUser.email.split('@')[0] : 'User'),
+        photo_url: fbUser.photoURL || undefined,
+      };
+
+      if (extraData?.provider_id) {
+        syncPayload.provider_id = extraData.provider_id;
+      }
+      if (extraData?.is_onboarded !== undefined) {
+        syncPayload.is_onboarded = extraData.is_onboarded;
+      }
+      if (extraData?.royalty_floor_pct !== undefined) {
+        syncPayload.royalty_floor_pct = extraData.royalty_floor_pct;
+      }
+      if (extraData?.voice_category !== undefined) {
+        syncPayload.voice_category = extraData.voice_category;
+      }
+      if (extraData?.vault_key !== undefined) {
+        syncPayload.vault_key = extraData.vault_key;
+      }
+
+      const syncRes = await fetch(`${apiBase}/api/v1/users/sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(syncPayload),
+      });
+
+      if (syncRes.ok) {
+        return await syncRes.json();
+      }
+    } catch (err) {
+      console.warn('Backend user synchronization deferred:', err);
+    }
+    return null;
+  };
+
   // Sync session state with Firebase Auth
   useEffect(() => {
     if (!auth) {
@@ -129,26 +295,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const token = await fbUser.getIdToken();
           localStorage.setItem('whicoustic_token', token);
 
+          const synced = await syncWithBackend(token, fbUser);
+
           setUser((prev) => {
+            const isOnboarded = synced?.is_onboarded !== undefined
+              ? Boolean(synced.is_onboarded)
+              : (prev?.isOnboarded ?? false);
+
             if (!prev) {
               const restored: User = {
-                id: fbUser.uid,
-                name: fbUser.displayName || fbUser.email?.split('@')[0] || 'User',
+                id: synced?.id ? String(synced.id) : fbUser.uid,
+                name: synced?.name || fbUser.displayName || fbUser.email?.split('@')[0] || 'User',
                 email: fbUser.email || '',
-                role: 'TALENT',
+                role: (synced?.role === 'STUDIO' || synced?.role === 'ENTERPRISE') ? synced.role : 'TALENT',
                 avatar: fbUser.photoURL || undefined,
-                isOnboarded: true,
+                vaultKey: synced?.vault_key || undefined,
+                isOnboarded,
                 token,
               };
               localStorage.setItem('whicoustic_user', JSON.stringify(restored));
+              setSessionCookie(restored, token);
               return restored;
             }
-            const updated = { ...prev, token };
+            const updated = {
+              ...prev,
+              isOnboarded,
+              token,
+              ...(synced?.vault_key ? { vaultKey: synced.vault_key } : {}),
+            };
             localStorage.setItem('whicoustic_user', JSON.stringify(updated));
+            setSessionCookie(updated, token);
             return updated;
           });
         } catch (tokenErr) {
-          console.warn('Failed to retrieve Firebase ID token:', tokenErr);
+          console.warn('Failed to retrieve Firebase ID token or sync profile:', tokenErr);
         }
       }
     });
@@ -162,32 +342,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('whicoustic_onboarding', JSON.stringify(updated));
       return updated;
     });
-  };
-
-  const syncWithBackend = async (token: string, fbUser: { uid: string; email: string | null; displayName: string | null; photoURL: string | null }, name?: string) => {
-    const apiBase = getApiBaseUrl();
-    try {
-      const syncRes = await fetch(`${apiBase}/api/v1/users/sync`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          uid: fbUser.uid,
-          email: fbUser.email,
-          name: name || fbUser.displayName || fbUser.email?.split('@')[0] || 'User',
-          photo_url: fbUser.photoURL,
-        }),
-      });
-
-      if (syncRes.ok) {
-        return await syncRes.json();
-      }
-    } catch (err) {
-      console.warn('Backend user synchronization deferred:', err);
-    }
-    return null;
   };
 
   const signup = async (email: string, password?: string, name?: string, dob?: string) => {
@@ -228,6 +382,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setUser(newUser);
       localStorage.setItem('whicoustic_user', JSON.stringify(newUser));
+      setSessionCookie(newUser, token);
     } catch (err: any) {
       throw new Error(formatFirebaseError(err));
     }
@@ -254,20 +409,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const synced = await syncWithBackend(token, fbUser);
 
+      const isOnboarded = synced?.is_onboarded !== undefined
+        ? Boolean(synced.is_onboarded)
+        : true;
+
       const loggedInUser: User = {
         id: synced?.id ? String(synced.id) : fbUser.uid,
         name: synced?.name || fbUser.displayName || email.split('@')[0],
         email: fbUser.email || email,
-        role: 'TALENT',
+        role: (synced?.role === 'STUDIO' || synced?.role === 'ENTERPRISE') ? synced.role : 'TALENT',
         avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-        vaultKey: 'SHA256:9f8e7d...01bc',
-        isOnboarded: true,
+        vaultKey: synced?.vault_key || 'SHA256:9f8e7d...01bc',
+        isOnboarded,
         token,
       };
 
       setUser(loggedInUser);
       localStorage.setItem('whicoustic_user', JSON.stringify(loggedInUser));
-      navigateToSubdomain('/dashboard');
+      setSessionCookie(loggedInUser, token);
+      if (isOnboarded) {
+        navigateToSubdomain('/dashboard');
+      } else {
+        navigateToMainDomain('/onboarding');
+      }
     } catch (err: any) {
       throw new Error(formatFirebaseError(err));
     }
@@ -289,36 +453,90 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const token = await fbUser.getIdToken();
       localStorage.setItem('whicoustic_token', token);
 
-      const synced = await syncWithBackend(token, fbUser);
+      const providerId = provider === 'github' ? 'github.com' : 'google.com';
+      const synced = await syncWithBackend(token, fbUser, undefined, { provider_id: providerId });
+
+      const isOnboarded = Boolean(synced?.is_onboarded);
 
       const oauthUser: User = {
         id: synced?.id ? String(synced.id) : fbUser.uid,
         name: synced?.name || fbUser.displayName || fbUser.email?.split('@')[0] || 'User',
         email: fbUser.email || `${fbUser.uid}@firebase.oauth`,
-        role: 'STUDIO',
+        role: (synced?.role === 'STUDIO' || synced?.role === 'ENTERPRISE') ? synced.role : 'TALENT',
         avatar: fbUser.photoURL || undefined,
-        isOnboarded: true,
+        vaultKey: synced?.vault_key || undefined,
+        isOnboarded,
         token,
       };
 
       setUser(oauthUser);
       localStorage.setItem('whicoustic_user', JSON.stringify(oauthUser));
-      navigateToSubdomain('/dashboard');
+      setSessionCookie(oauthUser, token);
+
+      if (isOnboarded) {
+        navigateToSubdomain('/dashboard');
+      } else {
+        navigateToMainDomain('/onboarding');
+      }
     } catch (err: any) {
       throw new Error(formatFirebaseError(err));
     }
   };
 
-  const completeOnboarding = () => {
+  const completeOnboarding = async (preferences?: OnboardingPreferences) => {
+    const token = localStorage.getItem('whicoustic_token') || user?.token;
+
+    const royaltyFloor = preferences?.royalty_floor_pct !== undefined
+      ? preferences.royalty_floor_pct
+      : onboardingData.royaltyFloorPct;
+
+    const voiceCategory = preferences?.voice_category || onboardingData.primaryCategory;
+
+    const rawVaultKey = preferences?.vault_key || `SHA256:${onboardingData.watermarkSha256}`;
+
+    if (token) {
+      try {
+        const synced = await syncWithBackend(
+          token,
+          {
+            uid: auth?.currentUser?.uid || user?.id || '',
+            email: user?.email || null,
+            displayName: user?.name || null,
+            photoURL: user?.avatar || null,
+          },
+          user?.name,
+          {
+            is_onboarded: true,
+            royalty_floor_pct: royaltyFloor,
+            voice_category: voiceCategory,
+            vault_key: rawVaultKey,
+          }
+        );
+        if (synced) {
+          console.log('Onboarding state successfully persisted to backend:', synced);
+        }
+      } catch (syncErr) {
+        console.warn('Backend sync during onboarding completion deferred:', syncErr);
+      }
+    }
+
     if (user) {
-      const updatedUser = {
+      const shortVault = rawVaultKey.startsWith('SHA256:')
+        ? `${rawVaultKey.substring(0, 19)}...`
+        : `SHA256:${rawVaultKey.substring(0, 12)}...`;
+
+      const updatedUser: User = {
         ...user,
         isOnboarded: true,
-        vaultKey: `SHA256:${onboardingData.watermarkSha256.substring(0, 12)}...`,
+        vaultKey: shortVault,
       };
       setUser(updatedUser);
       localStorage.setItem('whicoustic_user', JSON.stringify(updatedUser));
+      if (token) {
+        setSessionCookie(updatedUser, token);
+      }
     }
+
     navigateToSubdomain('/dashboard');
   };
 
@@ -331,10 +549,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.warn('Firebase signOut error:', err);
     }
     setUser(null);
+    clearSessionCookie();
     localStorage.removeItem('whicoustic_user');
     localStorage.removeItem('whicoustic_token');
     localStorage.setItem('whicoustic_logged_out', 'true');
-    navigateToMainDomain('/');
+    navigateToMainDomain('/?logged_out=true');
   };
 
   return (
@@ -342,6 +561,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         isAuthenticated: !!user,
+        isLoading,
         onboardingData,
         updateOnboardingData,
         signup,

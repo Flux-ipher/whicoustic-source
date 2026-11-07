@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useDomain } from '../../context/DomainContext';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { StepIndicator, Step } from '../../components/ui/StepIndicator';
@@ -16,14 +18,27 @@ import {
   Sliders,
   Award,
   HelpCircle,
+  AlertCircle,
 } from 'lucide-react';
 
 export const OnboardingFlow: React.FC = () => {
-  const { onboardingData, updateOnboardingData, completeOnboarding, user } = useAuth();
+  const {
+    onboardingData,
+    updateOnboardingData,
+    completeOnboarding,
+    user,
+    isAuthenticated,
+    isLoading,
+  } = useAuth();
+  const { navigateToSubdomain } = useDomain();
+  const navigate = useNavigate();
+
   const [currentStep, setCurrentStep] = useState(1);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingProgress, setRecordingProgress] = useState(0);
   const [showTroubleshooter, setShowTroubleshooter] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const calibrationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Clear timer on unmount
@@ -34,6 +49,21 @@ export const OnboardingFlow: React.FC = () => {
       }
     };
   }, []);
+
+  // Route mount guards: Enforce authentication and block redundant onboarding
+  useEffect(() => {
+    if (isLoading) return;
+
+    if (!isAuthenticated || !user) {
+      navigate('/login?redirect=/onboarding', { replace: true });
+      return;
+    }
+
+    if (user.isOnboarded) {
+      navigateToSubdomain('/dashboard');
+      return;
+    }
+  }, [isLoading, isAuthenticated, user, navigate, navigateToSubdomain]);
 
   const steps: Step[] = [
     { id: 1, title: 'Voice Persona & Role' },
@@ -63,6 +93,69 @@ export const OnboardingFlow: React.FC = () => {
       });
     }, 400);
   };
+
+  // Step 3 completion handler
+  const handleComplete = async () => {
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      await completeOnboarding({
+        royalty_floor_pct: onboardingData.royaltyFloorPct,
+        voice_category: onboardingData.primaryCategory,
+        vault_key: `SHA256:${onboardingData.watermarkSha256}`,
+      });
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setSubmitError(err.message);
+      } else {
+        setSubmitError('Failed to complete onboarding. Please try again.');
+      }
+      setIsSubmitting(false);
+    }
+  };
+
+  // Guard renders
+  if (isLoading) {
+    return (
+      <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-4">
+        <div className="w-10 h-10 border-3 border-t-transparent border-[#F59E0B] rounded-full animate-spin" />
+        <h2 className="text-xl font-bold font-recoleta text-[#0B1C30]">
+          Verifying Calibration Session
+        </h2>
+        <p className="font-berthold text-xs text-slate-600">
+          Confirming cryptographic identity and calibration requirements...
+        </p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-4">
+        <div className="w-10 h-10 border-3 border-t-transparent border-[#F59E0B] rounded-full animate-spin" />
+        <h2 className="text-xl font-bold font-recoleta text-[#0B1C30]">
+          Authentication Required
+        </h2>
+        <p className="font-berthold text-xs text-slate-600">
+          Redirecting to secure login gateway on whicoustic.xyz...
+        </p>
+      </div>
+    );
+  }
+
+  if (user.isOnboarded) {
+    return (
+      <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-4">
+        <div className="w-10 h-10 border-3 border-t-transparent border-[#F59E0B] rounded-full animate-spin" />
+        <h2 className="text-xl font-bold font-recoleta text-[#0B1C30]">
+          Biometric Vault Active
+        </h2>
+        <p className="font-berthold text-xs text-slate-600">
+          Your voice passport is already calibrated. Forwarding to platform console...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <PageTransition className="space-y-10">
@@ -312,6 +405,16 @@ export const OnboardingFlow: React.FC = () => {
               </p>
             </div>
 
+            {submitError && (
+              <div
+                role="alert"
+                className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs font-berthold text-red-700 flex items-start gap-2"
+              >
+                <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
+                <span>{submitError}</span>
+              </div>
+            )}
+
             <div className="pt-4 flex items-center justify-between">
               <Button variant="ghost" size="sm" onClick={() => setCurrentStep(2)} icon={<ArrowLeft className="w-4 h-4" />}>
                 Back
@@ -319,11 +422,13 @@ export const OnboardingFlow: React.FC = () => {
               <Button
                 variant="primary"
                 size="lg"
-                onClick={completeOnboarding}
+                onClick={handleComplete}
+                isLoading={isSubmitting}
+                disabled={isSubmitting}
                 icon={<ArrowRight className="w-4 h-4" />}
                 iconPosition="right"
               >
-                Complete & Enter Sub-domain Dashboard
+                {isSubmitting ? 'Finalizing Biometric Vault...' : 'Complete & Enter Sub-domain Dashboard'}
               </Button>
             </div>
           </div>

@@ -69,7 +69,7 @@ export const SignupPage: React.FC = () => {
     setError(null);
     try {
       await loginWithOAuth(provider);
-      navigate('/onboarding');
+      // loginWithOAuth in AuthContext is single source of truth for conditional routing
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);

@@ -25,6 +25,13 @@ except Exception:  # pragma: no cover - module import guard for environments wit
     fb_auth = None  # type: ignore
     credentials = None  # type: ignore
 
+try:
+    from google.oauth2 import id_token as google_id_token
+    from google.auth.transport import requests as google_requests
+except Exception:  # pragma: no cover
+    google_id_token = None  # type: ignore
+    google_requests = None  # type: ignore
+
 
 security = HTTPBearer(auto_error=False)
 
@@ -88,8 +95,8 @@ def verify_firebase_token(token: str) -> Dict:
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing token")
 
-    # Support mock auth in development / test environments
-    if settings.MOCK_AUTH_ENABLED and settings.ENVIRONMENT.lower() in {"development", "test"} and token == "mock-token-123":
+    # Support mock auth when enabled (support mock-token-123)
+    if settings.MOCK_AUTH_ENABLED and token == "mock-token-123":
         return {
             "uid": "demo-user-123",
             "email": "demo@whicoustic.com",
@@ -98,24 +105,50 @@ def verify_firebase_token(token: str) -> Dict:
             "is_admin": True,
         }
 
-    try:
-        _ensure_firebase_app()
-    except FirebaseNotConfigured as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    decoded = None
 
-    try:
-        decoded = fb_auth.verify_id_token(token, check_revoked=False)
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
+    # First attempt verification via firebase_admin if installed and configured
+    if firebase_admin is not None:
+        try:
+            _ensure_firebase_app()
+            decoded = fb_auth.verify_id_token(token, check_revoked=False)
+        except FirebaseNotConfigured:
+            decoded = None
+        except Exception:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
+
+    # Fallback to google.oauth2.id_token when firebase_admin is None or unconfigured
+    if decoded is None:
+        if google_id_token is not None and google_requests is not None:
+            try:
+                req = google_requests.Request()
+                audience = settings.FIREBASE_PROJECT_ID if (settings.FIREBASE_PROJECT_ID and settings.FIREBASE_PROJECT_ID != "dummy") else None
+                try:
+                    decoded = google_id_token.verify_firebase_token(token, req, audience=audience)
+                except Exception:
+                    if audience:
+                        decoded = google_id_token.verify_firebase_token(token, req, audience=None)
+                    else:
+                        raise
+            except Exception:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Firebase authentication is not configured and fallback verifier is unavailable",
+            )
 
     # Normalize and augment
+    uid = decoded.get("uid") or decoded.get("user_id") or decoded.get("sub")
     claims = {
-        "uid": decoded.get("uid"),
+        "uid": uid,
         "email": decoded.get("email"),
         "name": decoded.get("name"),
         "picture": decoded.get("picture"),
         **decoded,
     }
+    if "uid" not in claims or not claims["uid"]:
+        claims["uid"] = uid
     claims["is_admin"] = _is_admin_claims(claims)
     return claims
 

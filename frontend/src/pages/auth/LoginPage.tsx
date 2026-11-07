@@ -36,7 +36,7 @@ export const LoginPage: React.FC = () => {
     setIsLoading(true);
     try {
       await loginWithOAuth(provider);
-      // loginWithOAuth automatically redirects to Sub-domain Dashboard
+      // loginWithOAuth in AuthContext is single source of truth for conditional routing
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);

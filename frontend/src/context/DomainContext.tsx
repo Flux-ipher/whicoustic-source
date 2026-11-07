@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { buildSessionHandoffFragment, type SessionUser } from '../utils/authHandoff';
+import { setSessionCookie } from '../utils/cookies';
 
 export type DomainType = 'main' | 'app';
 
@@ -61,19 +63,42 @@ export const DomainProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const hostname = window.location.hostname;
     const port = window.location.port ? `:${window.location.port}` : '';
 
+    // Check for active authenticated session to attach ephemeral handoff hash and domain cookie
+    let hashFragment = '';
+    try {
+      const savedUserStr = localStorage.getItem('whicoustic_user');
+      const token = localStorage.getItem('whicoustic_token');
+      if (savedUserStr && token) {
+        const user = JSON.parse(savedUserStr) as SessionUser;
+        if (user && user.id && user.email) {
+          // Set Tier 2 domain-scoped cookie
+          setSessionCookie(user, token);
+          // Build Tier 1 URL hash fragment
+          hashFragment = buildSessionHandoffFragment(user, token);
+        }
+      }
+    } catch (err) {
+      console.warn('Session handoff preparation skipped:', err);
+    }
+
+    // Attach hash fragment to destination path if not already present
+    const destinationPath = path.includes('#')
+      ? path
+      : `${path}${hashFragment}`;
+
     if (configuredSubdomain && !hostname.startsWith('app.')) {
       // Use configured environment target
       const target = configuredSubdomain.includes(':')
         ? configuredSubdomain
         : `${configuredSubdomain}${port}`;
-      window.location.href = `${protocol}//${target}${path}`;
+      window.location.href = `${protocol}//${target}${destinationPath}`;
     } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      window.location.href = `${protocol}//app.localhost${port}${path}`;
+      window.location.href = `${protocol}//app.localhost${port}${destinationPath}`;
     } else if (hostname.includes('.') && !hostname.startsWith('app.')) {
-      window.location.href = `${protocol}//app.${hostname}${port}${path}`;
+      window.location.href = `${protocol}//app.${hostname}${port}${destinationPath}`;
     } else {
       setDomain('app');
-      window.location.pathname = path;
+      window.location.href = destinationPath;
     }
   };
 
@@ -83,6 +108,20 @@ export const DomainProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const protocol = rawProtocol.endsWith(':') ? rawProtocol : `${rawProtocol}:`;
     const hostname = window.location.hostname;
     const port = window.location.port ? `:${window.location.port}` : '';
+
+    // If active session exists, ensure cookie is synchronized
+    try {
+      const savedUserStr = localStorage.getItem('whicoustic_user');
+      const token = localStorage.getItem('whicoustic_token');
+      if (savedUserStr && token) {
+        const user = JSON.parse(savedUserStr) as SessionUser;
+        if (user && user.id && user.email) {
+          setSessionCookie(user, token);
+        }
+      }
+    } catch {
+      // Ignore
+    }
 
     if (configuredMain && hostname.startsWith('app.')) {
       const target = configuredMain.includes(':')
@@ -96,7 +135,7 @@ export const DomainProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       window.location.href = `${protocol}//${rootDomain}${port}${path}`;
     } else {
       setDomain('main');
-      window.location.pathname = path;
+      window.location.href = path;
     }
   };
 

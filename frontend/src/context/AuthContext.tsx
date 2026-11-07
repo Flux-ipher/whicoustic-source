@@ -115,6 +115,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Sync session state with Firebase Auth
   useEffect(() => {
+    if (!auth) {
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       if (localStorage.getItem('whicoustic_logged_out') === 'true') {
         return;
@@ -189,6 +193,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signup = async (email: string, password?: string, name?: string, dob?: string) => {
     localStorage.removeItem('whicoustic_logged_out');
 
+    if (!auth) {
+      throw new Error(
+        'Authentication service not configured. Please add VITE_FIREBASE_API_KEY to your Vercel Environment Variables.'
+      );
+    }
+
     try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
@@ -226,6 +236,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password?: string) => {
     localStorage.removeItem('whicoustic_logged_out');
 
+    if (!auth) {
+      throw new Error(
+        'Authentication service not configured. Please add VITE_FIREBASE_API_KEY to your Vercel Environment Variables.'
+      );
+    }
+
     try {
       const userCredential = await signInWithEmailAndPassword(
         auth,
@@ -259,6 +275,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithOAuth = async (provider: 'google' | 'github') => {
     localStorage.removeItem('whicoustic_logged_out');
+
+    if (!auth) {
+      throw new Error(
+        'Authentication service not configured. Please add VITE_FIREBASE_API_KEY to your Vercel Environment Variables.'
+      );
+    }
 
     try {
       const authProvider = provider === 'github' ? githubProvider : googleProvider;
@@ -302,7 +324,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      await signOut(auth);
+      if (auth) {
+        await signOut(auth);
+      }
     } catch (err) {
       console.warn('Firebase signOut error:', err);
     }

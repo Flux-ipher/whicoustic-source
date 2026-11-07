@@ -1,5 +1,12 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, GithubAuthProvider, Auth } from 'firebase/auth';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  GithubAuthProvider,
+  Auth,
+  browserLocalPersistence,
+  setPersistence,
+} from 'firebase/auth';
 
 const apiKey = (import.meta.env.VITE_FIREBASE_API_KEY as string) || '';
 
@@ -24,6 +31,10 @@ if (isFirebaseConfigured) {
   try {
     appInstance = !getApps().length ? initializeApp(firebaseConfig) : getApp();
     authInstance = getAuth(appInstance);
+    // Explicitly enforce browserLocalPersistence across full page refreshes and tab reloads
+    setPersistence(authInstance, browserLocalPersistence).catch((err) => {
+      console.warn('Firebase persistence initialization note:', err);
+    });
   } catch (err) {
     console.warn('Firebase initialization error:', err);
   }

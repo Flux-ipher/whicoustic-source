@@ -129,8 +129,19 @@ class StreamSession:
         self.total_samples_received += len(samples)
         self._buffer.extend(samples.tolist())
 
-        # Gate on VAD — skip silence
-        if not self._vad.is_speech_bytes(chunk):
+        # Gate on VAD — skip silence.
+        # Support arbitrary chunk sizes (e.g. 128ms / 2048 samples from Web Audio)
+        # by checking if any 30ms VAD subframe in the chunk contains speech.
+        is_speech = False
+        if len(chunk) == self._vad.frame_bytes:
+            is_speech = self._vad.is_speech_bytes(chunk)
+        elif len(samples) >= self._frame_samples:
+            segments = self._vad.segment_speech(samples)
+            is_speech = len(segments) > 0
+        else:
+            is_speech = self._vad.is_speech_array(samples)
+
+        if not is_speech:
             return None
 
         # Accumulate speech samples for async Whisper

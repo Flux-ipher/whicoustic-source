@@ -451,27 +451,7 @@ export const DemoPage: React.FC = () => {
         await audioCtx.resume();
       }
 
-      /* 3. Try loading pcm-processor AudioWorklet */
-      let workletLoaded = false;
-      try {
-        await audioCtx.audioWorklet.addModule('/pcm-processor.js');
-
-        const worklet = new AudioWorkletNode(audioCtx, 'pcm-processor');
-        const sink = audioCtx.createGain();
-        sink.gain.value = 0;
-
-        source.connect(worklet);
-        worklet.connect(sink);
-        sink.connect(audioCtx.destination);
-
-        workletRef.current = worklet;
-        sinkRef.current = sink;
-        workletLoaded = true;
-      } catch (err) {
-        console.warn('AudioWorklet module notice: running with direct analyser graph', err);
-      }
-
-      /* 4. Connect to Backend WebSocket */
+      /* 3. Connect to Backend WebSocket */
       setWsState('connecting');
 
       try {
@@ -518,11 +498,53 @@ export const DemoPage: React.FC = () => {
           }
         };
 
-        if (workletLoaded && workletRef.current) {
-          workletRef.current.port.onmessage = (event) => {
-            if (ws.readyState === WebSocket.OPEN) {
-              ws.send(event.data);
+        /* 4. Setup AudioWorklet or ScriptProcessor fallback for 16kHz PCM streaming */
+        let workletLoaded = false;
+        try {
+          await audioCtx.audioWorklet.addModule('/pcm-processor.js');
+
+          const worklet = new AudioWorkletNode(audioCtx, 'pcm-processor');
+          const sink = audioCtx.createGain();
+          sink.gain.value = 0;
+
+          source.connect(worklet);
+          worklet.connect(sink);
+          sink.connect(audioCtx.destination);
+
+          workletRef.current = worklet;
+          sinkRef.current = sink;
+
+          worklet.port.onmessage = (event) => {
+            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+              wsRef.current.send(event.data);
             }
+          };
+          workletLoaded = true;
+        } catch (err) {
+          console.warn('AudioWorklet module notice, using ScriptProcessor fallback:', err);
+        }
+
+        if (!workletLoaded) {
+          // Reliable ScriptProcessor fallback (resampling input to 16kHz Int16 PCM)
+          const bufferSize = 2048;
+          const proc = audioCtx.createScriptProcessor(bufferSize, 1, 1);
+          source.connect(proc);
+          proc.connect(audioCtx.destination);
+
+          proc.onaudioprocess = (e) => {
+            if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+            const input = e.inputBuffer.getChannelData(0);
+            const inRate = audioCtx.sampleRate;
+            const outRate = 16000;
+            const ratio = inRate / outRate;
+            const outLen = Math.floor(input.length / ratio);
+            const pcm16 = new Int16Array(outLen);
+            for (let i = 0; i < outLen; i++) {
+              const srcIdx = Math.floor(i * ratio);
+              const s = Math.max(-1, Math.min(1, input[srcIdx]));
+              pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+            }
+            wsRef.current.send(pcm16.buffer);
           };
         }
       } catch (err: unknown) {

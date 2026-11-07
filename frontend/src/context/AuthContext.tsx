@@ -1,4 +1,13 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+  updateProfile,
+} from 'firebase/auth';
+import { auth, googleProvider, githubProvider } from '../config/firebase';
 import { useDomain } from './DomainContext';
 import { getApiBaseUrl } from '../services/apiClient';
 
@@ -46,13 +55,37 @@ const defaultOnboarding: OnboardingData = {
   royaltyFloorPct: 18.5,
 };
 
+const formatFirebaseError = (err: any): string => {
+  if (!err || typeof err !== 'object') return 'Authentication failed. Please try again.';
+  const code = err.code;
+  switch (code) {
+    case 'auth/email-already-in-use':
+      return 'This email address is already in use. Please log in instead.';
+    case 'auth/invalid-email':
+      return 'Invalid email address format.';
+    case 'auth/weak-password':
+      return 'Password should be at least 6 characters.';
+    case 'auth/user-not-found':
+      return 'No account found with this email. Please register.';
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential':
+      return 'Incorrect email or password. Please verify your credentials.';
+    case 'auth/popup-closed-by-user':
+      return 'Authentication popup was closed before completing.';
+    case 'auth/unauthorized-domain':
+      return 'Domain not authorized in Firebase. Please add this domain to Firebase Console > Authentication > Authorized domains.';
+    default:
+      return err.message || 'Authentication failed. Please check your credentials and try again.';
+  }
+};
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { navigateToSubdomain, navigateToMainDomain } = useDomain();
 
   const [user, setUser] = useState<User | null>(() => {
-    // If explicitly logged out, do not revive demo user
+    // If explicitly logged out, do not revive session
     if (localStorage.getItem('whicoustic_logged_out') === 'true') {
       return null;
     }
@@ -65,7 +98,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
       }
     }
-    // Strict Real-Data & Security Policy: No unauthenticated access without verification
     return null;
   });
 
@@ -81,6 +113,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return defaultOnboarding;
   });
 
+  // Sync session state with Firebase Auth
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      if (localStorage.getItem('whicoustic_logged_out') === 'true') {
+        return;
+      }
+
+      if (fbUser) {
+        try {
+          const token = await fbUser.getIdToken();
+          localStorage.setItem('whicoustic_token', token);
+
+          setUser((prev) => {
+            if (!prev) {
+              const restored: User = {
+                id: fbUser.uid,
+                name: fbUser.displayName || fbUser.email?.split('@')[0] || 'User',
+                email: fbUser.email || '',
+                role: 'TALENT',
+                avatar: fbUser.photoURL || undefined,
+                isOnboarded: true,
+                token,
+              };
+              localStorage.setItem('whicoustic_user', JSON.stringify(restored));
+              return restored;
+            }
+            const updated = { ...prev, token };
+            localStorage.setItem('whicoustic_user', JSON.stringify(updated));
+            return updated;
+          });
+        } catch (tokenErr) {
+          console.warn('Failed to retrieve Firebase ID token:', tokenErr);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const updateOnboardingData = (data: Partial<OnboardingData>) => {
     setOnboardingData((prev) => {
       const updated = { ...prev, ...data };
@@ -89,132 +160,131 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  const syncWithBackend = async (token: string, fbUser: { uid: string; email: string | null; displayName: string | null; photoURL: string | null }, name?: string) => {
+    const apiBase = getApiBaseUrl();
+    try {
+      const syncRes = await fetch(`${apiBase}/api/v1/users/sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          uid: fbUser.uid,
+          email: fbUser.email,
+          name: name || fbUser.displayName || fbUser.email?.split('@')[0] || 'User',
+          photo_url: fbUser.photoURL,
+        }),
+      });
+
+      if (syncRes.ok) {
+        return await syncRes.json();
+      }
+    } catch (err) {
+      console.warn('Backend user synchronization deferred:', err);
+    }
+    return null;
+  };
+
   const signup = async (email: string, password?: string, name?: string, dob?: string) => {
     localStorage.removeItem('whicoustic_logged_out');
 
-    const apiBase = getApiBaseUrl();
-    const response = await fetch(`${apiBase}/api/v1/auth/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        username: email.split('@')[0].replace(/[^a-zA-Z0-9_-]/g, '_') || 'user',
+    try {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
         email,
-        password: password || 'DefaultPassword123!',
-        full_name: name || email.split('@')[0],
-        dob,
-      }),
-    });
+        password || 'DefaultPassword123!'
+      );
+      const fbUser = userCredential.user;
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      let msg = 'Registration compliance validation failed.';
-      const detail = errorData.detail;
-      if (Array.isArray(detail)) {
-        msg = detail.map((d: { msg?: string }) => d.msg || '').join(', ');
-      } else if (typeof detail === 'string') {
-        msg = detail;
+      if (name) {
+        await updateProfile(fbUser, { displayName: name }).catch(() => {});
       }
-      throw new Error(msg);
+
+      const token = await fbUser.getIdToken();
+      localStorage.setItem('whicoustic_token', token);
+
+      const synced = await syncWithBackend(token, fbUser, name);
+
+      const newUser: User = {
+        id: synced?.id ? String(synced.id) : fbUser.uid,
+        name: synced?.name || name || fbUser.displayName || email.split('@')[0],
+        email: fbUser.email || email,
+        role: 'TALENT',
+        isOnboarded: false,
+        dob,
+        token,
+      };
+
+      setUser(newUser);
+      localStorage.setItem('whicoustic_user', JSON.stringify(newUser));
+    } catch (err: any) {
+      throw new Error(formatFirebaseError(err));
     }
-
-    const regUser = await response.json().catch(() => ({}));
-
-    const newUser: User = {
-      id: regUser.id ? String(regUser.id) : `usr_${Math.random().toString(36).substring(2, 9)}`,
-      name: regUser.full_name || name || email.split('@')[0],
-      email: regUser.email || email,
-      role: 'TALENT',
-      isOnboarded: false,
-      dob: regUser.dob || dob,
-    };
-    setUser(newUser);
-    localStorage.setItem('whicoustic_user', JSON.stringify(newUser));
   };
 
   const login = async (email: string, password?: string) => {
     localStorage.removeItem('whicoustic_logged_out');
-    const pwd = password || 'DefaultPassword123!';
 
-    const apiBase = getApiBaseUrl();
-    const response = await fetch(`${apiBase}/api/v1/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
         email,
-        password: pwd,
-      }),
-    });
+        password || 'DefaultPassword123!'
+      );
+      const fbUser = userCredential.user;
+      const token = await fbUser.getIdToken();
+      localStorage.setItem('whicoustic_token', token);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      let msg = 'Authentication failed. Please verify your email and password.';
-      const detail = errorData.detail;
-      if (typeof detail === 'string') {
-        msg = detail;
-      } else if (Array.isArray(detail)) {
-        msg = detail.map((d: { msg?: string }) => d.msg || '').join(', ');
-      }
-      throw new Error(msg);
+      const synced = await syncWithBackend(token, fbUser);
+
+      const loggedInUser: User = {
+        id: synced?.id ? String(synced.id) : fbUser.uid,
+        name: synced?.name || fbUser.displayName || email.split('@')[0],
+        email: fbUser.email || email,
+        role: 'TALENT',
+        avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        vaultKey: 'SHA256:9f8e7d...01bc',
+        isOnboarded: true,
+        token,
+      };
+
+      setUser(loggedInUser);
+      localStorage.setItem('whicoustic_user', JSON.stringify(loggedInUser));
+      navigateToSubdomain('/dashboard');
+    } catch (err: any) {
+      throw new Error(formatFirebaseError(err));
     }
-
-    const tokenData = await response.json().catch(() => ({}));
-    if (tokenData.access_token) {
-      localStorage.setItem('whicoustic_token', tokenData.access_token);
-    }
-
-    let profile: Partial<User> = {};
-    if (tokenData.access_token) {
-      try {
-        const profRes = await fetch(`${apiBase}/api/v1/auth/profile`, {
-          headers: {
-            Authorization: `Bearer ${tokenData.access_token}`,
-          },
-        });
-        if (profRes.ok) {
-          const profData = await profRes.json();
-          profile = {
-            id: String(profData.id),
-            name: profData.full_name || profData.username,
-            email: profData.email,
-            dob: profData.dob,
-          };
-        }
-      } catch {
-        // Fallback to minimal profile if network glitch
-      }
-    }
-
-    const loggedInUser: User = {
-      id: profile.id || 'usr_forensic_9921',
-      name: profile.name || email.split('@')[0],
-      email: profile.email || email,
-      role: 'TALENT',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      vaultKey: 'SHA256:9f8e7d...01bc',
-      isOnboarded: true,
-      dob: profile.dob,
-      token: tokenData.access_token,
-    };
-    setUser(loggedInUser);
-    localStorage.setItem('whicoustic_user', JSON.stringify(loggedInUser));
-    navigateToSubdomain('/dashboard');
   };
 
   const loginWithOAuth = async (provider: 'google' | 'github') => {
     localStorage.removeItem('whicoustic_logged_out');
-    const oauthUser: User = {
-      id: `usr_oauth_${provider}_${Date.now()}`,
-      name: provider === 'google' ? 'Alex Rivera (Google)' : 'Dev Architect (GitHub)',
-      email: provider === 'google' ? 'alex.rivera@gmail.com' : 'dev@github.com',
-      role: 'STUDIO',
-      isOnboarded: false,
-    };
-    setUser(oauthUser);
-    localStorage.setItem('whicoustic_user', JSON.stringify(oauthUser));
+
+    try {
+      const authProvider = provider === 'github' ? githubProvider : googleProvider;
+      const userCredential = await signInWithPopup(auth, authProvider);
+      const fbUser = userCredential.user;
+      const token = await fbUser.getIdToken();
+      localStorage.setItem('whicoustic_token', token);
+
+      const synced = await syncWithBackend(token, fbUser);
+
+      const oauthUser: User = {
+        id: synced?.id ? String(synced.id) : fbUser.uid,
+        name: synced?.name || fbUser.displayName || fbUser.email?.split('@')[0] || 'User',
+        email: fbUser.email || `${fbUser.uid}@firebase.oauth`,
+        role: 'STUDIO',
+        avatar: fbUser.photoURL || undefined,
+        isOnboarded: true,
+        token,
+      };
+
+      setUser(oauthUser);
+      localStorage.setItem('whicoustic_user', JSON.stringify(oauthUser));
+      navigateToSubdomain('/dashboard');
+    } catch (err: any) {
+      throw new Error(formatFirebaseError(err));
+    }
   };
 
   const completeOnboarding = () => {
@@ -227,11 +297,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(updatedUser);
       localStorage.setItem('whicoustic_user', JSON.stringify(updatedUser));
     }
-    // Redirect to Dashboard on the sub-domain!
     navigateToSubdomain('/dashboard');
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.warn('Firebase signOut error:', err);
+    }
     setUser(null);
     localStorage.removeItem('whicoustic_user');
     localStorage.removeItem('whicoustic_token');
@@ -265,4 +339,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

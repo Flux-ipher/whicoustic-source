@@ -66,9 +66,16 @@ export const SignupPage: React.FC = () => {
 
   const handleOAuth = async (provider: 'google' | 'github') => {
     setIsLoading(true);
+    setError(null);
     try {
       await loginWithOAuth(provider);
       navigate('/onboarding');
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Federated sign-in failed. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }

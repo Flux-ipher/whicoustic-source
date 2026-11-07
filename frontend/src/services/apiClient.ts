@@ -17,10 +17,14 @@ export class ApiError extends Error {
   }
 }
 
-const getApiBaseUrl = (): string => {
-  const envUrl = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL) as string | undefined;
+export const getApiBaseUrl = (): string => {
+  const envUrl = (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL) as string | undefined;
   if (envUrl) {
-    return envUrl.replace(/\/+$/, '');
+    return envUrl.replace(/\/api\/v1\/?$/, '').replace(/\/+$/, '');
+  }
+  // In production on whicoustic.xyz, automatically route to production API backend
+  if (typeof window !== 'undefined' && window.location.hostname.includes('whicoustic.xyz')) {
+    return 'https://api.whicoustic.xyz';
   }
   // In development, Vite proxies '/api' to backend http://localhost:8000
   return '';

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import { useDomain } from './DomainContext';
+import { getApiBaseUrl } from '../services/apiClient';
 
 export interface User {
   id: string;
@@ -91,7 +92,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signup = async (email: string, password?: string, name?: string, dob?: string) => {
     localStorage.removeItem('whicoustic_logged_out');
 
-    const response = await fetch('/api/v1/auth/register', {
+    const apiBase = getApiBaseUrl();
+    const response = await fetch(`${apiBase}/api/v1/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -135,7 +137,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('whicoustic_logged_out');
     const pwd = password || 'DefaultPassword123!';
 
-    const response = await fetch('/api/v1/auth/login', {
+    const apiBase = getApiBaseUrl();
+    const response = await fetch(`${apiBase}/api/v1/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -166,7 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let profile: Partial<User> = {};
     if (tokenData.access_token) {
       try {
-        const profRes = await fetch('/api/v1/auth/profile', {
+        const profRes = await fetch(`${apiBase}/api/v1/auth/profile`, {
           headers: {
             Authorization: `Bearer ${tokenData.access_token}`,
           },

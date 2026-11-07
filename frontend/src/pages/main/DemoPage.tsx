@@ -49,9 +49,20 @@ export interface Verdict {
 }
 
 /* ─── Helpers ────────────────────────────────────────────────── */
-const API_BASE = (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8000';
-const cleanBase = API_BASE.replace(/\/api\/v1\/?$/, '').replace(/\/$/, '');
-const WS_URL = cleanBase.replace(/^https?/, (protocol) => protocol === 'https' ? 'wss' : 'ws') + '/api/v1/verify/stream';
+const getWsUrl = (): string => {
+  const envUrl = (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL) as string | undefined;
+  if (envUrl) {
+    const clean = envUrl.replace(/\/api\/v1\/?$/, '').replace(/\/$/, '');
+    const wsProto = clean.startsWith('https') ? 'wss' : 'ws';
+    const host = clean.replace(/^https?:\/\//, '');
+    return `${wsProto}://${host}/api/v1/verify/stream`;
+  }
+  if (typeof window !== 'undefined' && window.location.hostname.includes('whicoustic.xyz')) {
+    return 'wss://api.whicoustic.xyz/api/v1/verify/stream';
+  }
+  return 'ws://localhost:8000/api/v1/verify/stream';
+};
+const WS_URL = getWsUrl();
 
 function scoreColor(score: number): string {
   if (score >= 0.7) return 'var(--success)';

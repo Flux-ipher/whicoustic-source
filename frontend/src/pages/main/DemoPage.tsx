@@ -870,40 +870,50 @@ export const DemoPage: React.FC = () => {
                   </div>
 
                   {/* Layers accordion */}
-                  {latest.layers && Object.keys(latest.layers).length > 0 && (
-                    <div className="ld-layers">
-                      <button
-                        type="button"
-                        className="ld-layers-toggle"
-                        onClick={() => setLayersOpen((o) => !o)}
-                        aria-expanded={layersOpen}
-                      >
-                        <Layers size={13} />
-                        <span>6-Layer Defense Score Breakdown</span>
-                        <span className="ml-auto flex items-center gap-1 text-[11px] text-slate-500">
-                          {Object.keys(latest.layers).length} Layers
-                          {layersOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                        </span>
-                      </button>
-                      <AnimatePresence>
-                        {layersOpen && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.25 }}
-                            style={{ overflow: 'hidden' }}
-                          >
-                            <div className="ld-layers-body">
-                              {Object.entries(latest.layers).map(([k, v]) => (
-                                <LayerRow key={k} name={k} layer={v} />
-                              ))}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  )}
+                  {latest.layers && Object.keys(latest.layers).length > 0 && (() => {
+                    // Filter out duplicate legacy aliases (e.g. 'layer1_antispoof' vs 'anti_spoof')
+                    // Prefer canonical friendly names if present, or strip duplicate keys.
+                    const entries = Object.entries(latest.layers);
+                    const hasCanonical = entries.some(([k]) => ['anti_spoof', 'speaker_consistency', 'prosody', 'paralinguistic', 'semantic', 'watermark'].includes(k));
+                    const displayLayers = hasCanonical
+                      ? entries.filter(([k]) => !k.startsWith('layer'))
+                      : entries;
+
+                    return (
+                      <div className="ld-layers">
+                        <button
+                          type="button"
+                          className="ld-layers-toggle"
+                          onClick={() => setLayersOpen((o) => !o)}
+                          aria-expanded={layersOpen}
+                        >
+                          <Layers size={13} />
+                          <span>6-Layer Defense Score Breakdown</span>
+                          <span className="ml-auto flex items-center gap-1 text-[11px] text-slate-500">
+                            {displayLayers.length} Layers
+                            {layersOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                          </span>
+                        </button>
+                        <AnimatePresence>
+                          {layersOpen && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.25 }}
+                              style={{ overflow: 'hidden' }}
+                            >
+                              <div className="ld-layers-body">
+                                {displayLayers.map(([k, v]) => (
+                                  <LayerRow key={k} name={k} layer={v} />
+                                ))}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </AnimatePresence>

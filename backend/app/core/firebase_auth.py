@@ -45,6 +45,11 @@ def _get_google_auth_request():
     return _google_auth_request
 
 
+def _reset_google_auth_request():
+    global _google_auth_request
+    _google_auth_request = None
+
+
 security = HTTPBearer(auto_error=False)
 
 
@@ -161,6 +166,7 @@ def verify_firebase_token(token: str) -> Dict:
                     except Exception:
                         raise
             except Exception:
+                _reset_google_auth_request()
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid or expired token",
@@ -198,7 +204,13 @@ async def get_current_user(credentials_hdr: Optional[HTTPAuthorizationCredential
 
     Raises 401 if missing/invalid. Adds `is_admin` to claims if allowlisted.
     """
-    if credentials_hdr is None or not credentials_hdr.scheme or credentials_hdr.scheme.lower() != "bearer":
+    if (
+        credentials_hdr is None
+        or not credentials_hdr.scheme
+        or credentials_hdr.scheme.lower() != "bearer"
+        or not credentials_hdr.credentials
+        or not credentials_hdr.credentials.strip()
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing or malformed bearer token",

@@ -157,6 +157,7 @@ async def list_voices(
     ]
 
 @router.get("/{voice_id}", response_model=VoiceResponse)
+@router.get("/{voice_id}/", response_model=VoiceResponse)
 async def get_voice(
     voice_id: str,
     current_user: User = Depends(get_current_user),
@@ -188,6 +189,7 @@ async def get_voice(
     )
 
 @router.put("/{voice_id}", response_model=VoiceResponse)
+@router.put("/{voice_id}/", response_model=VoiceResponse)
 async def update_voice(
     voice_id: str,
     voice_update: VoiceUpdate,
@@ -229,6 +231,7 @@ async def update_voice(
     )
 
 @router.delete("/{voice_id}")
+@router.delete("/{voice_id}/")
 async def delete_voice(
     voice_id: str,
     current_user: User = Depends(get_current_user),
@@ -257,6 +260,7 @@ async def delete_voice(
     return {"message": "Voice deleted successfully"}
 
 @router.get("/{voice_id}/preview")
+@router.get("/{voice_id}/preview/")
 async def get_voice_preview(
     voice_id: str,
     current_user: User = Depends(get_current_user),
@@ -287,6 +291,7 @@ async def get_voice_preview(
     )
 
 @router.post("/{voice_id}/clone-test")
+@router.post("/{voice_id}/clone-test/")
 async def test_voice_clone(
     voice_id: str,
     text: str = "Hello, this is a test of your cloned voice.",
@@ -329,6 +334,7 @@ async def test_voice_clone(
 
 
 @router.get("/{voice_id}/stream", dependencies=[Depends(rate_limit_streaming)])
+@router.get("/{voice_id}/stream/", dependencies=[Depends(rate_limit_streaming)])
 async def stream_voice_audio(
     voice_id: str,
     request: Request,

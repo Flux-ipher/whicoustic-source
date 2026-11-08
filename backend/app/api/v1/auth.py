@@ -53,7 +53,13 @@ async def get_current_user(
     db: Session = Depends(get_db)
 ) -> User:
     """Unified authentication dependency supporting Firebase ID tokens, local JWTs, and dev mock."""
-    if credentials is None or not credentials.scheme or credentials.scheme.lower() != "bearer":
+    if (
+        credentials is None
+        or not credentials.scheme
+        or credentials.scheme.lower() != "bearer"
+        or not credentials.credentials
+        or not credentials.credentials.strip()
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing or malformed bearer token",

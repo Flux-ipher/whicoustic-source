@@ -21,6 +21,37 @@ import {
   getApiBaseUrl,
 } from '../apiClient.ts';
 import { auth, setAuthForTesting } from '../../config/firebase.ts';
+import {
+  getCookieDomain,
+  buildSessionCookieString,
+  getSessionCookie,
+  setSessionCookie,
+} from '../../utils/cookies.ts';
+
+// In-memory mock for environments without a fully featured document.cookie
+if (typeof (globalThis as any).document === 'undefined') {
+  let cookieStore = '';
+  (globalThis as any).document = {
+    get cookie() {
+      return cookieStore;
+    },
+    set cookie(val: string) {
+      const [pair] = val.split(';');
+      if (!pair) return;
+      const [name] = pair.split('=');
+      if (val.includes('max-age=0') || val.includes('expires=Thu, 01 Jan 1970')) {
+        cookieStore = cookieStore
+          .split('; ')
+          .filter((c) => !c.startsWith(`${name}=`))
+          .join('; ');
+      } else {
+        const existing = cookieStore.split('; ').filter((c) => c && !c.startsWith(`${name}=`));
+        existing.push(pair.trim());
+        cookieStore = existing.join('; ');
+      }
+    },
+  };
+}
 
 // In-memory mock for environments without a fully featured localStorage (e.g. Node 22+)
 if (!globalThis.localStorage || typeof (globalThis.localStorage as any).clear !== 'function') {
@@ -365,6 +396,91 @@ export async function runApiClientTests(): Promise<{ passed: number; failed: num
           'brand-new-synced-token',
           'whicoustic_user.token must be synchronized with fresh token'
         );
+      },
+    },
+    {
+      name: 'persistFreshToken falls back to cookie session user when whicoustic_user is missing in localStorage',
+      fn: () => {
+        localStorage.clear();
+        const cookieUser = { id: 'u_cookie_99', email: 'cookie@whicoustic.xyz', name: 'Cookie User', role: 'TALENT' as const, isOnboarded: true };
+        setSessionCookie(cookieUser, 'old-cookie-token');
+
+        persistFreshToken('fresh-token-from-cookie-fallback');
+
+        assertEqual(
+          localStorage.getItem('whicoustic_token'),
+          'fresh-token-from-cookie-fallback',
+          'whicoustic_token should be set'
+        );
+        const savedUser = JSON.parse(localStorage.getItem('whicoustic_user') || '{}');
+        assertEqual(
+          savedUser.token,
+          'fresh-token-from-cookie-fallback',
+          'whicoustic_user token must be populated from cookie session'
+        );
+        const refreshedCookie = getSessionCookie();
+        assert(refreshedCookie !== null, 'Cookie should be refreshed');
+        assertEqual(
+          refreshedCookie?.token,
+          'fresh-token-from-cookie-fallback',
+          'Session cookie token must be updated with fresh token'
+        );
+      },
+    },
+    {
+      name: 'persistFreshToken falls back to auth.currentUser when both localStorage and cookie are empty',
+      fn: () => {
+        localStorage.clear();
+        if (typeof document !== 'undefined') {
+          document.cookie = 'whicoustic_session=; max-age=0;';
+        }
+
+        const originalAuth = auth;
+        setAuthForTesting({
+          currentUser: {
+            uid: 'fb_user_direct_123',
+            email: 'direct@whicoustic.xyz',
+            displayName: 'Direct User',
+          },
+        });
+
+        try {
+          persistFreshToken('direct-firebase-fresh-token');
+
+          assertEqual(
+            localStorage.getItem('whicoustic_token'),
+            'direct-firebase-fresh-token',
+            'whicoustic_token should be set'
+          );
+          const savedUser = JSON.parse(localStorage.getItem('whicoustic_user') || '{}');
+          assertEqual(
+            savedUser.id,
+            'fb_user_direct_123',
+            'whicoustic_user id must be populated from auth.currentUser'
+          );
+          assertEqual(
+            savedUser.token,
+            'direct-firebase-fresh-token',
+            'whicoustic_user token must be populated from fresh token'
+          );
+        } finally {
+          setAuthForTesting(originalAuth);
+        }
+      },
+    },
+    {
+      name: 'getCookieDomain and buildSessionCookieString support .whicoustic.ai apex and console subdomains',
+      fn: () => {
+        assertEqual(getCookieDomain('whicoustic.ai'), '.whicoustic.ai', 'whicoustic.ai domain match');
+        assertEqual(getCookieDomain('app.whicoustic.ai'), '.whicoustic.ai', 'app.whicoustic.ai domain match');
+        assertEqual(getCookieDomain('whicoustic.xyz'), '.whicoustic.xyz', 'whicoustic.xyz domain match');
+        assertEqual(getCookieDomain('app.whicoustic.xyz'), '.whicoustic.xyz', 'app.whicoustic.xyz domain match');
+        assertEqual(getCookieDomain('localhost'), '', 'localhost domain must be empty');
+
+        const testUser = { id: 'u1', email: 'test@whicoustic.ai', name: 'User 1', role: 'TALENT' as const, isOnboarded: true };
+        const cookieStr = buildSessionCookieString(testUser, 'test-tok-ai', { hostname: 'app.whicoustic.ai' });
+        assert(cookieStr.includes('domain=.whicoustic.ai'), 'Cookie string must include domain=.whicoustic.ai');
+        assert(cookieStr.includes('Secure'), 'Cookie string must include Secure attribute for production domains');
       },
     },
   ];

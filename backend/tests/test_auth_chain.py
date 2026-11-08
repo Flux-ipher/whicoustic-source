@@ -51,6 +51,7 @@ if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -796,6 +797,93 @@ def test_firebase_token_clock_skew_tolerance():
         assert kwargs.get("clock_skew_in_seconds") == 10
 
 
+def test_empty_or_whitespace_bearer_credentials_returns_401_not_500():
+    """Verify empty/whitespace bearer tokens return HTTP 401 with WWW-Authenticate, not 500."""
+    from app.api.v1 import auth as v1_auth
+    from app.core import firebase_auth
+    from fastapi.security import HTTPAuthorizationCredentials
+
+    # 1. API endpoint call with empty Bearer
+    resp_empty = client.get("/api/v1/voices/", headers={"Authorization": "Bearer "})
+    assert resp_empty.status_code == 401
+    assert "WWW-Authenticate" in resp_empty.headers
+
+    # 2. API endpoint call with whitespace Bearer
+    resp_ws = client.get("/api/v1/voices/", headers={"Authorization": "Bearer    "})
+    assert resp_ws.status_code == 401
+    assert "WWW-Authenticate" in resp_ws.headers
+
+    # 3. Direct invocation of v1_auth.get_current_user with credentials=None
+    db = next(override_get_db())
+    try:
+        none_cred = HTTPAuthorizationCredentials(scheme="Bearer", credentials="")
+        with pytest.raises(HTTPException) as exc_info:
+            import asyncio
+            asyncio.run(v1_auth.get_current_user(none_cred, db))
+        assert exc_info.value.status_code == 401
+        assert "WWW-Authenticate" in exc_info.value.headers
+
+        # 4. Direct invocation of core firebase_auth.get_current_user with empty credentials
+        with pytest.raises(HTTPException) as exc_info_fb:
+            asyncio.run(firebase_auth.get_current_user(none_cred))
+        assert exc_info_fb.value.status_code == 401
+        assert "WWW-Authenticate" in exc_info_fb.value.headers
+    finally:
+        db.close()
+
+
+def test_voice_id_trailing_slash_invariance():
+    """Verify GET /api/v1/voices/{voice_id} and GET /api/v1/voices/{voice_id}/ both return 200 without 307 redirect."""
+    db = next(override_get_db())
+    try:
+        user = db.query(User).filter(User.email == "demo@whicoustic.com").first()
+        if not user:
+            user = User(
+                username="demo_user_ts",
+                email="demo@whicoustic.com",
+                hashed_password="pw",
+                full_name="Demo User",
+                is_active=True
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
+        test_voice_id = "voice_ts_test_01"
+        voice = db.query(Voice).filter(Voice.id == test_voice_id).first()
+        if not voice:
+            voice = Voice(
+                id=test_voice_id,
+                user_id=user.id,
+                name="Slash Test Voice",
+                status="ready",
+                duration=5.0,
+                quality_score=0.98,
+            )
+            db.add(voice)
+            db.commit()
+
+        # Both endpoints should return 200 directly (no 307 redirect)
+        resp_no_slash = client.get(f"/api/v1/voices/{test_voice_id}", headers={"Authorization": "Bearer mock-token-123"})
+        assert resp_no_slash.status_code == 200
+        assert resp_no_slash.json()["id"] == test_voice_id
+
+        resp_with_slash = client.get(f"/api/v1/voices/{test_voice_id}/", headers={"Authorization": "Bearer mock-token-123"})
+        assert resp_with_slash.status_code == 200
+        assert resp_with_slash.json()["id"] == test_voice_id
+    finally:
+        db.close()
+
+
+def test_google_auth_request_reset_on_failure():
+    """Verify _reset_google_auth_request resets the cached connection pool."""
+    from app.core import firebase_auth
+
+    firebase_auth._get_google_auth_request()
+    firebase_auth._reset_google_auth_request()
+    assert firebase_auth._google_auth_request is None
+
+
 # ---------------------------------------------------------------------------
 # Standalone Runner
 # ---------------------------------------------------------------------------
@@ -847,6 +935,12 @@ if __name__ == "__main__":
     print("  [PASS] test_verify_access_token_endpoint_with_firebase_and_local_tokens")
     test_firebase_token_clock_skew_tolerance()
     print("  [PASS] test_firebase_token_clock_skew_tolerance")
+    test_empty_or_whitespace_bearer_credentials_returns_401_not_500()
+    print("  [PASS] test_empty_or_whitespace_bearer_credentials_returns_401_not_500")
+    test_voice_id_trailing_slash_invariance()
+    print("  [PASS] test_voice_id_trailing_slash_invariance")
+    test_google_auth_request_reset_on_failure()
+    print("  [PASS] test_google_auth_request_reset_on_failure")
     print("=======================================================================")
-    print("ALL 22 VERIFICATION TESTS PASSED (100%)!")
+    print("ALL 25 VERIFICATION TESTS PASSED (100%)!")
     print("=======================================================================")

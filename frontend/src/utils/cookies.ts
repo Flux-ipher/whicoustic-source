@@ -52,6 +52,10 @@ export function getCookieDomain(hostname?: string): string {
     return PRODUCTION_ROOT_DOMAIN;
   }
 
+  if (host === 'whicoustic.ai' || host.endsWith('.whicoustic.ai')) {
+    return '.whicoustic.ai';
+  }
+
   // Generic two-part domain fallback (e.g. custom staging domains)
   const parts = host.split('.');
   if (parts.length >= 2) {
@@ -79,7 +83,7 @@ export function buildSessionCookieString(
   const maxAge = options?.maxAgeSeconds ?? DEFAULT_COOKIE_MAX_AGE_SECONDS;
 
   const cookieDomain = getCookieDomain(hostname);
-  const isProd = hostname.endsWith('whicoustic.xyz') || isHttps;
+  const isProd = hostname.endsWith('whicoustic.xyz') || hostname.endsWith('whicoustic.ai') || isHttps;
 
   const payload = encodeURIComponent(
     JSON.stringify({

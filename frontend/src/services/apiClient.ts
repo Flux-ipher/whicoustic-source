@@ -136,18 +136,37 @@ async function ensureAuthReady(): Promise<void> {
 export function persistFreshToken(token: string): void {
   try {
     localStorage.setItem('whicoustic_token', token);
+    let user: any = null;
     const savedUser = localStorage.getItem('whicoustic_user');
     if (savedUser) {
       try {
-        const user = JSON.parse(savedUser);
-        if (user && typeof user === 'object') {
-          user.token = token;
-          localStorage.setItem('whicoustic_user', JSON.stringify(user));
-          setSessionCookie(user, token);
-        }
+        user = JSON.parse(savedUser);
       } catch {
-        // Ignore user json parse error
+        user = null;
       }
+    }
+    if (!user || typeof user !== 'object') {
+      const cookieSession = getSessionCookie();
+      if (cookieSession?.user) {
+        user = cookieSession.user;
+      }
+    }
+    if (!user || typeof user !== 'object') {
+      if (auth?.currentUser) {
+        const fb = auth.currentUser;
+        user = {
+          id: fb.uid,
+          email: fb.email || `${fb.uid}@whicoustic.xyz`,
+          name: fb.displayName || fb.email?.split('@')[0] || 'User',
+          role: 'TALENT',
+          isOnboarded: true,
+        };
+      }
+    }
+    if (user && typeof user === 'object') {
+      user.token = token;
+      localStorage.setItem('whicoustic_user', JSON.stringify(user));
+      setSessionCookie(user, token);
     }
   } catch (err) {
     console.warn('Failed to persist fresh token across storage and cookies:', err);

@@ -17,6 +17,8 @@ import {
   handleResponse,
   requestWithRetry,
   persistFreshToken,
+  isTokenExpired,
+  decodeJwtPayload,
   ApiError,
   getApiBaseUrl,
 } from '../apiClient.ts';
@@ -24,6 +26,7 @@ import { auth, setAuthForTesting } from '../../config/firebase.ts';
 import {
   getCookieDomain,
   buildSessionCookieString,
+  buildClearCookieStrings,
   getSessionCookie,
   setSessionCookie,
 } from '../../utils/cookies.ts';
@@ -481,6 +484,103 @@ export async function runApiClientTests(): Promise<{ passed: number; failed: num
         const cookieStr = buildSessionCookieString(testUser, 'test-tok-ai', { hostname: 'app.whicoustic.ai' });
         assert(cookieStr.includes('domain=.whicoustic.ai'), 'Cookie string must include domain=.whicoustic.ai');
         assert(cookieStr.includes('Secure'), 'Cookie string must include Secure attribute for production domains');
+      },
+    },
+    {
+      name: 'isTokenExpired accurately detects expired, fresh, and mock tokens',
+      fn: () => {
+        const now = Math.floor(Date.now() / 1000);
+        const toB64Url = (obj: any) => {
+          const str = JSON.stringify(obj);
+          const raw = typeof btoa !== 'undefined'
+            ? btoa(str)
+            : (globalThis as any).Buffer.from(str).toString('base64');
+          return raw.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        };
+
+        const expiredB64 = toB64Url({ sub: 'user1', exp: now - 60 });
+        const expiredToken = `eyJhbGciOiJSUzI1NiJ9.${expiredB64}.fakesig`;
+        assertEqual(isTokenExpired(expiredToken), true, 'Expired JWT must return true');
+
+        const freshB64 = toB64Url({ sub: 'user2', exp: now + 3600 });
+        const freshToken = `eyJhbGciOiJSUzI1NiJ9.${freshB64}.fakesig`;
+        assertEqual(isTokenExpired(freshToken), false, 'Fresh JWT must return false');
+
+        assertEqual(isTokenExpired('mock-token-123'), false, 'Non-JWT mock tokens should not be expired');
+      },
+    },
+    {
+      name: 'requestWithRetry proactively refreshes and transmits fresh token when stored token is expired',
+      fn: async () => {
+        localStorage.clear();
+        const now = Math.floor(Date.now() / 1000);
+        const toB64Url = (obj: any) => {
+          const str = JSON.stringify(obj);
+          const raw = typeof btoa !== 'undefined'
+            ? btoa(str)
+            : (globalThis as any).Buffer.from(str).toString('base64');
+          return raw.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        };
+        const expiredB64 = toB64Url({ sub: 'u-exp', exp: now - 120 });
+        const expiredToken = `header.${expiredB64}.sig`;
+        localStorage.setItem('whicoustic_token', expiredToken);
+
+        let initialAuthHeader: string | null = null;
+        let fetchCallCount = 0;
+        const originalFetch = globalThis.fetch;
+
+        globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+          fetchCallCount++;
+          const headers = new Headers(init?.headers);
+          initialAuthHeader = headers.get('Authorization');
+          return new Response(JSON.stringify({ success: true }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }) as typeof fetch;
+
+        const originalAuth = auth;
+        let forceRefreshPassed = false;
+        setAuthForTesting({
+          authStateReady: async () => {},
+          currentUser: {
+            getIdToken: async (force?: boolean) => {
+              if (force) forceRefreshPassed = true;
+              return 'newly-minted-fresh-token-777';
+            },
+          },
+        });
+
+        try {
+          const res = await requestWithRetry<{ success: boolean }>(
+            'https://api.whicoustic.xyz/api/v1/voices/',
+            { method: 'GET' }
+          );
+
+          assertEqual(fetchCallCount, 1, 'Only 1 fetch call needed when proactive refresh catches expired token');
+          assertEqual(forceRefreshPassed, true, 'forceRefresh=true must be passed to getIdToken on expired token');
+          assertEqual(initialAuthHeader, 'Bearer newly-minted-fresh-token-777', 'Fresh token must be sent on initial fetch');
+          assertEqual(localStorage.getItem('whicoustic_token'), 'newly-minted-fresh-token-777', 'Fresh token must be persisted');
+          assertEqual(res.success, true, 'Response must be successful');
+        } finally {
+          globalThis.fetch = originalFetch;
+          setAuthForTesting(originalAuth);
+        }
+      },
+    },
+    {
+      name: 'buildClearCookieStrings attaches Secure attribute for HTTPS and production domains',
+      fn: () => {
+        const prodStrings = buildClearCookieStrings('app.whicoustic.xyz');
+        assert(prodStrings.length >= 2, 'Should return root and host-only clear strings');
+        for (const str of prodStrings) {
+          assert(str.includes('; Secure'), `Clear string must include ; Secure for production: ${str}`);
+        }
+
+        const aiStrings = buildClearCookieStrings('whicoustic.ai');
+        for (const str of aiStrings) {
+          assert(str.includes('; Secure'), `Clear string must include ; Secure for whicoustic.ai: ${str}`);
+        }
       },
     },
   ];

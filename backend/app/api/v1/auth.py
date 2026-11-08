@@ -20,7 +20,7 @@ from ...core.security import (
     get_password_hash,
     verify_token
 )
-from ...core.firebase_auth import verify_firebase_token
+from ...core.firebase_auth import verify_firebase_token, is_mock_auth_allowed
 from ...models.user import User
 from ...schemas.auth import (
     UserCreate, 
@@ -69,7 +69,7 @@ async def get_current_user(
     token = credentials.credentials.strip()
 
     # 1. Dev Mock Bypass
-    if settings.MOCK_AUTH_ENABLED and settings.ENVIRONMENT.lower() in {"development", "test"} and token == "mock-token-123":
+    if is_mock_auth_allowed() and token == "mock-token-123":
         user = db.query(User).filter(User.email == "demo@whicoustic.com").first()
         if not user:
             password_hash = get_password_hash("demo123")
@@ -279,11 +279,13 @@ async def login_user(credentials: UserLogin, db: Session = Depends(get_db)):
     )
 
 @router.get("/profile", response_model=UserResponse)
+@router.get("/profile/", response_model=UserResponse)
 async def get_user_profile(current_user: User = Depends(get_current_user)):
     """Get current user's profile information."""
     return UserResponse.model_validate(current_user)
 
 @router.put("/profile", response_model=UserResponse)
+@router.put("/profile/", response_model=UserResponse)
 async def update_user_profile(
     profile_data: UserUpdate,
     current_user: User = Depends(get_current_user),
@@ -327,6 +329,7 @@ async def create_api_key(
     )
 
 @router.post("/verify-token")
+@router.post("/verify-token/")
 async def verify_access_token(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
 ):
@@ -340,7 +343,7 @@ async def verify_access_token(
     token = credentials.credentials.strip()
 
     # Dev mock token support
-    if settings.MOCK_AUTH_ENABLED and settings.ENVIRONMENT.lower() in {"development", "test"} and token == "mock-token-123":
+    if is_mock_auth_allowed() and token == "mock-token-123":
         return {"valid": True, "user_id": "demo-user-123"}
 
     # Try Firebase ID token first

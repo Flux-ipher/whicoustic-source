@@ -123,10 +123,39 @@ export const handleResponse = async <T>(response: Response): Promise<T> => {
   throw new ApiError(errorMessage, response.status, errorDetails);
 };
 
+export function decodeJwtPayload(token: string): any {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    let b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    const buf = (globalThis as any).Buffer;
+    const jsonStr = typeof atob !== 'undefined'
+      ? atob(b64)
+      : (buf ? buf.from(b64, 'base64').toString('utf-8') : '');
+    if (!jsonStr) return null;
+    return JSON.parse(jsonStr);
+  } catch {
+    return null;
+  }
+}
+
+export function isTokenExpired(token: string, skewSeconds = 30): boolean {
+  if (!token || typeof token !== 'string') return true;
+  const payload = decodeJwtPayload(token);
+  if (payload && typeof payload.exp === 'number') {
+    return Date.now() / 1000 >= payload.exp - skewSeconds;
+  }
+  return false;
+}
+
 async function ensureAuthReady(): Promise<void> {
   if (auth && typeof (auth as any).authStateReady === 'function') {
     try {
-      await (auth as any).authStateReady();
+      await Promise.race([
+        (auth as any).authStateReady(),
+        new Promise((resolve) => setTimeout(resolve, 3000)),
+      ]);
     } catch {
       // Ignore auth ready error
     }
@@ -178,15 +207,17 @@ export async function requestWithRetry<T>(
   options: RequestInit,
   isFormData = false
 ): Promise<T> {
-  // 1. Proactive auth initialization check if no token found in storage
+  // 1. Proactive auth initialization & expiry check
   let token = getAuthToken();
-  if (!token && auth) {
+  const tokenIsExpired = Boolean(token && isTokenExpired(token));
+  if ((!token || tokenIsExpired) && auth) {
     await ensureAuthReady();
     if (auth.currentUser) {
       try {
-        token = await auth.currentUser.getIdToken();
-        if (token) {
-          persistFreshToken(token);
+        const freshToken = await auth.currentUser.getIdToken(tokenIsExpired);
+        if (freshToken) {
+          token = freshToken;
+          persistFreshToken(freshToken);
         }
       } catch (tokenErr) {
         console.warn('Initial token acquisition deferred:', tokenErr);

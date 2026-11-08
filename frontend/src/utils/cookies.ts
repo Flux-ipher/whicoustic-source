@@ -175,14 +175,24 @@ export function parseSessionCookieString(
  * Pure builder function to generate cookie removal strings for both root domain and host-only.
  */
 export function buildClearCookieStrings(hostname?: string): string[] {
-  const cookieDomain = getCookieDomain(hostname);
+  const host = (
+    hostname ||
+    (typeof window !== 'undefined' && window.location && typeof window.location.hostname === 'string'
+      ? window.location.hostname
+      : '')
+  ).toLowerCase();
+  const isHttps = typeof window !== 'undefined' && window.location ? window.location.protocol === 'https:' : false;
+  const isProd = host.endsWith('whicoustic.xyz') || host.endsWith('whicoustic.ai') || isHttps;
+  const cookieDomain = getCookieDomain(host);
+  const secureSuffix = isProd ? '; Secure' : '';
+
   const clearStrings = [
-    `${SESSION_COOKIE_NAME}=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`,
+    `${SESSION_COOKIE_NAME}=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secureSuffix}`,
   ];
 
   if (cookieDomain) {
     clearStrings.push(
-      `${SESSION_COOKIE_NAME}=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; domain=${cookieDomain}; SameSite=Lax`
+      `${SESSION_COOKIE_NAME}=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; domain=${cookieDomain}; SameSite=Lax${secureSuffix}`
     );
   }
 

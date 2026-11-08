@@ -115,6 +115,14 @@ def _is_admin_claims(claims: Dict) -> bool:
     return (email and email in admin_emails) or (uid and uid in admin_uids) or bool(claims.get("admin") or claims.get("is_admin"))
 
 
+def is_mock_auth_allowed() -> bool:
+    """Check if mock auth bypass (mock-token-123) is permitted in active environment."""
+    env = (settings.ENVIRONMENT or "").lower()
+    if env not in {"development", "test"}:
+        return False
+    return bool(settings.MOCK_AUTH_ENABLED)
+
+
 def verify_firebase_token(token: str) -> Dict:
     """Verify a Firebase ID token or return mock user dict if in dev/test with mock-token-123."""
     if not token or not token.strip():
@@ -127,7 +135,7 @@ def verify_firebase_token(token: str) -> Dict:
     token = token.strip()
 
     # Support mock auth when enabled (support mock-token-123 strictly in dev/test)
-    if settings.MOCK_AUTH_ENABLED and settings.ENVIRONMENT.lower() in {"development", "test"} and token == "mock-token-123":
+    if is_mock_auth_allowed() and token == "mock-token-123":
         return {
             "uid": "demo-user-123",
             "email": "demo@whicoustic.com",

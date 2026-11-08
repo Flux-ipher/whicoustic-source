@@ -51,6 +51,7 @@ if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -593,6 +594,296 @@ def test_firebase_auth_mock_token_production_rejected():
         settings.MOCK_AUTH_ENABLED = orig_mock
 
 
+def test_firebase_auth_core_verify_token_fallback_on_admin_failure():
+    """Verify that verify_firebase_token falls back to google.oauth2.id_token when Firebase Admin fails."""
+    from unittest.mock import MagicMock
+    from app.core import firebase_auth
+    from app.core.firebase_auth import verify_firebase_token
+
+    mock_google_decoded = {
+        "sub": "fb_fallback_user_1",
+        "email": "fallback_user@whicoustic.xyz",
+        "name": "Fallback User",
+        "picture": "https://whicoustic.xyz/avatar.png",
+    }
+
+    mock_fb_admin = MagicMock()
+    mock_fb_auth = MagicMock()
+    mock_fb_auth.verify_id_token.side_effect = Exception("Service account mismatch or revoked")
+
+    with patch.object(firebase_auth, "firebase_admin", mock_fb_admin), \
+         patch.object(firebase_auth, "fb_auth", mock_fb_auth), \
+         patch.object(firebase_auth, "_ensure_firebase_app", return_value=None), \
+         patch.object(firebase_auth.google_id_token, "verify_firebase_token", return_value=mock_google_decoded):
+
+        claims = verify_firebase_token("valid-google-public-token-abc")
+        assert claims["uid"] == "fb_fallback_user_1"
+        assert claims["email"] == "fallback_user@whicoustic.xyz"
+        assert claims["name"] == "Fallback User"
+        assert claims["picture"] == "https://whicoustic.xyz/avatar.png"
+        assert "is_admin" in claims
+
+
+def test_firebase_auth_core_get_current_user_dependency():
+    """Verify app.core.firebase_auth.get_current_user enforces Bearer scheme and returns claims."""
+    import asyncio
+    from fastapi import HTTPException
+    from app.core.firebase_auth import get_current_user as core_get_current_user
+    from fastapi.security import HTTPAuthorizationCredentials
+
+    # 1. Missing credentials header -> 401
+    with pytest.raises(HTTPException) as exc_info:
+        asyncio.run(core_get_current_user(None))
+    assert exc_info.value.status_code == 401
+    assert "WWW-Authenticate" in exc_info.value.headers
+    assert "Bearer" in exc_info.value.headers["WWW-Authenticate"]
+
+    # 2. Invalid scheme -> 401
+    with pytest.raises(HTTPException) as exc_info_scheme:
+        asyncio.run(core_get_current_user(HTTPAuthorizationCredentials(scheme="Basic", credentials="xyz")))
+    assert exc_info_scheme.value.status_code == 401
+
+    # 3. Valid Bearer credentials
+    mock_claims = {
+        "uid": "core_user_1",
+        "email": "core@whicoustic.xyz",
+        "name": "Core User",
+        "is_admin": False,
+    }
+    with patch("app.core.firebase_auth.verify_firebase_token", return_value=mock_claims):
+        creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token-core-1")
+        resolved = asyncio.run(core_get_current_user(creds))
+        assert resolved["uid"] == "core_user_1"
+        assert resolved["email"] == "core@whicoustic.xyz"
+
+
+def test_voices_list_and_upload_with_google_cert_fallback_token():
+    """Verify GET /api/v1/voices/ and POST /api/v1/voices/upload succeed when token verified via Google cert fallback."""
+    from unittest.mock import MagicMock
+    from app.core import firebase_auth
+
+    mock_google_decoded = {
+        "sub": "fb_cert_uploader",
+        "email": "cert_uploader@whicoustic.xyz",
+        "name": "Cert Uploader",
+        "picture": None,
+    }
+    dummy_wav = b"RIFF" + struct.pack("<I", 44 + 4000) + b"WAVEfmt " + struct.pack("<IHHIIHH", 16, 1, 1, 16000, 32000, 2, 16) + b"data" + struct.pack("<I", 4000) + (b"\x00\x00" * 2000)
+
+    mock_fb_admin = MagicMock()
+    mock_fb_auth = MagicMock()
+    mock_fb_auth.verify_id_token.side_effect = Exception("Project mismatch on service account")
+
+    with patch.object(firebase_auth, "firebase_admin", mock_fb_admin), \
+         patch.object(firebase_auth, "fb_auth", mock_fb_auth), \
+         patch.object(firebase_auth, "_ensure_firebase_app", return_value=None), \
+         patch.object(firebase_auth.google_id_token, "verify_firebase_token", return_value=mock_google_decoded), \
+         patch("app.api.v1.voices.AudioProcessor.get_audio_info_from_path", return_value={
+             "duration": 5.0,
+             "sample_rate": 16000,
+             "file_size_bytes": len(dummy_wav),
+             "quality_score": 0.95,
+         }), \
+         patch("app.api.v1.voices.voice_training_service.start_training", new_callable=AsyncMock):
+
+        # 1. GET /api/v1/voices/
+        resp_get = client.get("/api/v1/voices/", headers={"Authorization": "Bearer google-cert-token-xyz"})
+        assert resp_get.status_code == 200, f"Expected 200, got {resp_get.status_code}: {resp_get.text}"
+        assert isinstance(resp_get.json(), list)
+
+        # 2. POST /api/v1/voices/upload
+        files = {"file": ("demo_cert.wav", dummy_wav, "audio/wav")}
+        data = {"name": "Cert Fallback Voice"}
+        resp_post = client.post(
+            "/api/v1/voices/upload",
+            files=files,
+            data=data,
+            headers={"Authorization": "Bearer google-cert-token-xyz"}
+        )
+        assert resp_post.status_code == 200, f"Expected 200, got {resp_post.status_code}: {resp_post.text}"
+        assert resp_post.json()["name"] == "Cert Fallback Voice"
+        assert resp_post.json()["status"] == "pending"
+
+
+def test_voices_endpoints_reject_invalid_or_missing_tokens():
+    """Verify GET and POST voice endpoints reject unauthenticated or malformed requests with 401."""
+    dummy_wav = b"RIFF" + struct.pack("<I", 44 + 100) + b"WAVEfmt " + struct.pack("<IHHIIHH", 16, 1, 1, 16000, 32000, 2, 16) + b"data" + struct.pack("<I", 100) + (b"\x00" * 100)
+
+    # 1. GET /api/v1/voices/ without header
+    resp_get_no_token = client.get("/api/v1/voices/")
+    assert resp_get_no_token.status_code == 401
+    assert "WWW-Authenticate" in resp_get_no_token.headers
+    assert "Bearer" in resp_get_no_token.headers["WWW-Authenticate"]
+
+    # 2. GET /api/v1/voices/ with malformed token
+    resp_get_bad_token = client.get("/api/v1/voices/", headers={"Authorization": "Bearer totally-invalid-token"})
+    assert resp_get_bad_token.status_code == 401
+    assert "WWW-Authenticate" in resp_get_bad_token.headers
+
+    # 3. POST /api/v1/voices/upload without header
+    resp_post_no_token = client.post(
+        "/api/v1/voices/upload",
+        files={"file": ("test.wav", dummy_wav, "audio/wav")},
+        data={"name": "No Token"}
+    )
+    assert resp_post_no_token.status_code == 401
+    assert "WWW-Authenticate" in resp_post_no_token.headers
+
+    # 4. POST /api/v1/voices/upload with malformed token
+    resp_post_bad_token = client.post(
+        "/api/v1/voices/upload",
+        files={"file": ("test.wav", dummy_wav, "audio/wav")},
+        data={"name": "Bad Token"},
+        headers={"Authorization": "Bearer invalid.malformed.jwt"}
+    )
+    assert resp_post_bad_token.status_code == 401
+    assert "WWW-Authenticate" in resp_post_bad_token.headers
+
+
+def test_verify_access_token_endpoint_with_firebase_and_local_tokens():
+    """Verify POST /api/v1/auth/verify-token supports Firebase ID tokens, local JWTs, and rejects invalid tokens with 401."""
+    # 1. Local JWT token
+    local_token = create_access_token(data={"sub": "local_user_77"})
+    resp_local = client.post("/api/v1/auth/verify-token", headers={"Authorization": f"Bearer {local_token}"})
+    assert resp_local.status_code == 200
+    assert resp_local.json()["valid"] is True
+    assert resp_local.json()["user_id"] == "local_user_77"
+
+    # 2. Firebase ID token
+    mock_fb_claims = {
+        "uid": "fb_verified_user_99",
+        "email": "verified@whicoustic.xyz",
+        "name": "Verified User",
+        "is_admin": False,
+    }
+    with patch("app.api.v1.auth.verify_firebase_token", return_value=mock_fb_claims):
+        resp_fb = client.post("/api/v1/auth/verify-token", headers={"Authorization": "Bearer fb-valid-token-99"})
+        assert resp_fb.status_code == 200
+        assert resp_fb.json()["valid"] is True
+        assert resp_fb.json()["user_id"] == "fb_verified_user_99"
+
+    # 3. Invalid token returns 401 with WWW-Authenticate header
+    resp_invalid = client.post("/api/v1/auth/verify-token", headers={"Authorization": "Bearer invalid-garbage-token"})
+    assert resp_invalid.status_code == 401
+    assert "WWW-Authenticate" in resp_invalid.headers
+    assert "Bearer" in resp_invalid.headers["WWW-Authenticate"]
+
+    # 4. Missing token returns 401
+    resp_missing = client.post("/api/v1/auth/verify-token")
+    assert resp_missing.status_code == 401
+    assert "WWW-Authenticate" in resp_missing.headers
+
+
+def test_firebase_token_clock_skew_tolerance():
+    """Verify verify_firebase_token passes clock_skew_in_seconds=10 to google verifier."""
+    from app.core import firebase_auth
+    from unittest.mock import MagicMock
+
+    mock_google_decoded = {
+        "sub": "skew_user_1",
+        "email": "skew@whicoustic.xyz",
+        "name": "Skew User",
+    }
+    mock_verifier = MagicMock(return_value=mock_google_decoded)
+
+    with patch.object(firebase_auth, "firebase_admin", None), \
+         patch.object(firebase_auth.google_id_token, "verify_firebase_token", mock_verifier):
+
+        claims = firebase_auth.verify_firebase_token("token-with-slight-drift")
+        assert claims["uid"] == "skew_user_1"
+        assert mock_verifier.called
+        # Verify clock_skew_in_seconds was passed as 10
+        kwargs = mock_verifier.call_args.kwargs
+        assert kwargs.get("clock_skew_in_seconds") == 10
+
+
+def test_empty_or_whitespace_bearer_credentials_returns_401_not_500():
+    """Verify empty/whitespace bearer tokens return HTTP 401 with WWW-Authenticate, not 500."""
+    from app.api.v1 import auth as v1_auth
+    from app.core import firebase_auth
+    from fastapi.security import HTTPAuthorizationCredentials
+
+    # 1. API endpoint call with empty Bearer
+    resp_empty = client.get("/api/v1/voices/", headers={"Authorization": "Bearer "})
+    assert resp_empty.status_code == 401
+    assert "WWW-Authenticate" in resp_empty.headers
+
+    # 2. API endpoint call with whitespace Bearer
+    resp_ws = client.get("/api/v1/voices/", headers={"Authorization": "Bearer    "})
+    assert resp_ws.status_code == 401
+    assert "WWW-Authenticate" in resp_ws.headers
+
+    # 3. Direct invocation of v1_auth.get_current_user with credentials=None
+    db = next(override_get_db())
+    try:
+        none_cred = HTTPAuthorizationCredentials(scheme="Bearer", credentials="")
+        with pytest.raises(HTTPException) as exc_info:
+            import asyncio
+            asyncio.run(v1_auth.get_current_user(none_cred, db))
+        assert exc_info.value.status_code == 401
+        assert "WWW-Authenticate" in exc_info.value.headers
+
+        # 4. Direct invocation of core firebase_auth.get_current_user with empty credentials
+        with pytest.raises(HTTPException) as exc_info_fb:
+            asyncio.run(firebase_auth.get_current_user(none_cred))
+        assert exc_info_fb.value.status_code == 401
+        assert "WWW-Authenticate" in exc_info_fb.value.headers
+    finally:
+        db.close()
+
+
+def test_voice_id_trailing_slash_invariance():
+    """Verify GET /api/v1/voices/{voice_id} and GET /api/v1/voices/{voice_id}/ both return 200 without 307 redirect."""
+    db = next(override_get_db())
+    try:
+        user = db.query(User).filter(User.email == "demo@whicoustic.com").first()
+        if not user:
+            user = User(
+                username="demo_user_ts",
+                email="demo@whicoustic.com",
+                hashed_password="pw",
+                full_name="Demo User",
+                is_active=True
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
+        test_voice_id = "voice_ts_test_01"
+        voice = db.query(Voice).filter(Voice.id == test_voice_id).first()
+        if not voice:
+            voice = Voice(
+                id=test_voice_id,
+                user_id=user.id,
+                name="Slash Test Voice",
+                status="ready",
+                duration=5.0,
+                quality_score=0.98,
+            )
+            db.add(voice)
+            db.commit()
+
+        # Both endpoints should return 200 directly (no 307 redirect)
+        resp_no_slash = client.get(f"/api/v1/voices/{test_voice_id}", headers={"Authorization": "Bearer mock-token-123"})
+        assert resp_no_slash.status_code == 200
+        assert resp_no_slash.json()["id"] == test_voice_id
+
+        resp_with_slash = client.get(f"/api/v1/voices/{test_voice_id}/", headers={"Authorization": "Bearer mock-token-123"})
+        assert resp_with_slash.status_code == 200
+        assert resp_with_slash.json()["id"] == test_voice_id
+    finally:
+        db.close()
+
+
+def test_google_auth_request_reset_on_failure():
+    """Verify _reset_google_auth_request resets the cached connection pool."""
+    from app.core import firebase_auth
+
+    firebase_auth._get_google_auth_request()
+    firebase_auth._reset_google_auth_request()
+    assert firebase_auth._google_auth_request is None
+
+
 # ---------------------------------------------------------------------------
 # Standalone Runner
 # ---------------------------------------------------------------------------
@@ -632,6 +923,24 @@ if __name__ == "__main__":
     print("  [PASS] test_firebase_token_auto_provisioning_username_collision_recovery")
     test_firebase_auth_mock_token_production_rejected()
     print("  [PASS] test_firebase_auth_mock_token_production_rejected")
+    test_firebase_auth_core_verify_token_fallback_on_admin_failure()
+    print("  [PASS] test_firebase_auth_core_verify_token_fallback_on_admin_failure")
+    test_firebase_auth_core_get_current_user_dependency()
+    print("  [PASS] test_firebase_auth_core_get_current_user_dependency")
+    test_voices_list_and_upload_with_google_cert_fallback_token()
+    print("  [PASS] test_voices_list_and_upload_with_google_cert_fallback_token")
+    test_voices_endpoints_reject_invalid_or_missing_tokens()
+    print("  [PASS] test_voices_endpoints_reject_invalid_or_missing_tokens")
+    test_verify_access_token_endpoint_with_firebase_and_local_tokens()
+    print("  [PASS] test_verify_access_token_endpoint_with_firebase_and_local_tokens")
+    test_firebase_token_clock_skew_tolerance()
+    print("  [PASS] test_firebase_token_clock_skew_tolerance")
+    test_empty_or_whitespace_bearer_credentials_returns_401_not_500()
+    print("  [PASS] test_empty_or_whitespace_bearer_credentials_returns_401_not_500")
+    test_voice_id_trailing_slash_invariance()
+    print("  [PASS] test_voice_id_trailing_slash_invariance")
+    test_google_auth_request_reset_on_failure()
+    print("  [PASS] test_google_auth_request_reset_on_failure")
     print("=======================================================================")
-    print("ALL 16 VERIFICATION TESTS PASSED (100%)!")
+    print("ALL 25 VERIFICATION TESTS PASSED (100%)!")
     print("=======================================================================")

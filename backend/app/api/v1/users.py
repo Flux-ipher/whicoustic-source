@@ -25,6 +25,7 @@ def _ensure_unique_username(db: Session, base_username: str) -> str:
 
 
 @router.post('/users/sync', response_model=UserOut)
+@router.post('/users/sync/', response_model=UserOut)
 def sync_user(
     payload: UserSyncIn,
     db: Session = Depends(get_db),

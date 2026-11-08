@@ -4,8 +4,8 @@
  * Zero silent mock fallbacks: network or HTTP failures throw typed ApiError instances.
  */
 
-import { auth } from '../config/firebase';
-import { getSessionCookie } from '../utils/cookies';
+import { auth } from '../config/firebase.ts';
+import { getSessionCookie, setSessionCookie } from '../utils/cookies.ts';
 
 export class ApiError extends Error {
   status: number;
@@ -52,7 +52,10 @@ export const getAuthToken = (): string | null => {
   if (savedUser) {
     try {
       const parsed = JSON.parse(savedUser);
-      if (parsed.token) return parsed.token;
+      if (parsed.token) {
+        localStorage.setItem('whicoustic_token', parsed.token);
+        return parsed.token;
+      }
     } catch {
       // Ignore parse failure
     }
@@ -120,13 +123,82 @@ export const handleResponse = async <T>(response: Response): Promise<T> => {
   throw new ApiError(errorMessage, response.status, errorDetails);
 };
 
+export function decodeJwtPayload(token: string): any {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    let b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    const buf = (globalThis as any).Buffer;
+    const jsonStr = typeof atob !== 'undefined'
+      ? atob(b64)
+      : (buf ? buf.from(b64, 'base64').toString('utf-8') : '');
+    if (!jsonStr) return null;
+    return JSON.parse(jsonStr);
+  } catch {
+    return null;
+  }
+}
+
+export function isTokenExpired(token: string, skewSeconds = 30): boolean {
+  if (!token || typeof token !== 'string') return true;
+  const payload = decodeJwtPayload(token);
+  if (payload && typeof payload.exp === 'number') {
+    return Date.now() / 1000 >= payload.exp - skewSeconds;
+  }
+  return false;
+}
+
 async function ensureAuthReady(): Promise<void> {
   if (auth && typeof (auth as any).authStateReady === 'function') {
     try {
-      await (auth as any).authStateReady();
+      await Promise.race([
+        (auth as any).authStateReady(),
+        new Promise((resolve) => setTimeout(resolve, 3000)),
+      ]);
     } catch {
       // Ignore auth ready error
     }
+  }
+}
+
+export function persistFreshToken(token: string): void {
+  try {
+    localStorage.setItem('whicoustic_token', token);
+    let user: any = null;
+    const savedUser = localStorage.getItem('whicoustic_user');
+    if (savedUser) {
+      try {
+        user = JSON.parse(savedUser);
+      } catch {
+        user = null;
+      }
+    }
+    if (!user || typeof user !== 'object') {
+      const cookieSession = getSessionCookie();
+      if (cookieSession?.user) {
+        user = cookieSession.user;
+      }
+    }
+    if (!user || typeof user !== 'object') {
+      if (auth?.currentUser) {
+        const fb = auth.currentUser;
+        user = {
+          id: fb.uid,
+          email: fb.email || `${fb.uid}@whicoustic.xyz`,
+          name: fb.displayName || fb.email?.split('@')[0] || 'User',
+          role: 'TALENT',
+          isOnboarded: true,
+        };
+      }
+    }
+    if (user && typeof user === 'object') {
+      user.token = token;
+      localStorage.setItem('whicoustic_user', JSON.stringify(user));
+      setSessionCookie(user, token);
+    }
+  } catch (err) {
+    console.warn('Failed to persist fresh token across storage and cookies:', err);
   }
 }
 
@@ -135,21 +207,40 @@ export async function requestWithRetry<T>(
   options: RequestInit,
   isFormData = false
 ): Promise<T> {
+  // 1. Proactive auth initialization & expiry check
+  let token = getAuthToken();
+  const tokenIsExpired = Boolean(token && isTokenExpired(token));
+  if ((!token || tokenIsExpired) && auth) {
+    await ensureAuthReady();
+    if (auth.currentUser) {
+      try {
+        const freshToken = await auth.currentUser.getIdToken(tokenIsExpired);
+        if (freshToken) {
+          token = freshToken;
+          persistFreshToken(freshToken);
+        }
+      } catch (tokenErr) {
+        console.warn('Initial token acquisition deferred:', tokenErr);
+      }
+    }
+  }
+
   let headers = buildHeaders(options.headers, isFormData);
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
   let response = await fetch(url, { ...options, headers });
 
-  // 401 Token Refresh & Single Retry
+  // 2. 401 Token Refresh & Single Retry
   if (response.status === 401) {
     try {
       await ensureAuthReady();
       if (auth?.currentUser) {
         const freshToken = await auth.currentUser.getIdToken(true);
         if (freshToken) {
-          localStorage.setItem('whicoustic_token', freshToken);
-          const retryHeaders = new Headers(options.headers);
-          if (!isFormData && !retryHeaders.has('Content-Type')) {
-            retryHeaders.set('Content-Type', 'application/json');
-          }
+          persistFreshToken(freshToken);
+          const retryHeaders = new Headers(headers);
           retryHeaders.set('Authorization', `Bearer ${freshToken}`);
           response = await fetch(url, { ...options, headers: retryHeaders });
         }

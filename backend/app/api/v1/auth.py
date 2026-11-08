@@ -20,7 +20,7 @@ from ...core.security import (
     get_password_hash,
     verify_token
 )
-from ...core.firebase_auth import verify_firebase_token
+from ...core.firebase_auth import verify_firebase_token, is_mock_auth_allowed
 from ...models.user import User
 from ...schemas.auth import (
     UserCreate, 
@@ -53,7 +53,13 @@ async def get_current_user(
     db: Session = Depends(get_db)
 ) -> User:
     """Unified authentication dependency supporting Firebase ID tokens, local JWTs, and dev mock."""
-    if credentials is None or not credentials.scheme or credentials.scheme.lower() != "bearer":
+    if (
+        credentials is None
+        or not credentials.scheme
+        or credentials.scheme.lower() != "bearer"
+        or not credentials.credentials
+        or not credentials.credentials.strip()
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing or malformed bearer token",
@@ -63,7 +69,7 @@ async def get_current_user(
     token = credentials.credentials.strip()
 
     # 1. Dev Mock Bypass
-    if settings.MOCK_AUTH_ENABLED and settings.ENVIRONMENT.lower() in {"development", "test"} and token == "mock-token-123":
+    if is_mock_auth_allowed() and token == "mock-token-123":
         user = db.query(User).filter(User.email == "demo@whicoustic.com").first()
         if not user:
             password_hash = get_password_hash("demo123")
@@ -273,11 +279,13 @@ async def login_user(credentials: UserLogin, db: Session = Depends(get_db)):
     )
 
 @router.get("/profile", response_model=UserResponse)
+@router.get("/profile/", response_model=UserResponse)
 async def get_user_profile(current_user: User = Depends(get_current_user)):
     """Get current user's profile information."""
     return UserResponse.model_validate(current_user)
 
 @router.put("/profile", response_model=UserResponse)
+@router.put("/profile/", response_model=UserResponse)
 async def update_user_profile(
     profile_data: UserUpdate,
     current_user: User = Depends(get_current_user),
@@ -321,23 +329,39 @@ async def create_api_key(
     )
 
 @router.post("/verify-token")
+@router.post("/verify-token/")
 async def verify_access_token(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
 ):
-    """Verify if the provided token is valid."""
+    """Verify if the provided token is valid (supports both Firebase ID tokens and local JWTs)."""
     if not credentials or not credentials.credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing or malformed bearer token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    token = credentials.credentials
+    token = credentials.credentials.strip()
+
+    # Dev mock token support
+    if is_mock_auth_allowed() and token == "mock-token-123":
+        return {"valid": True, "user_id": "demo-user-123"}
+
+    # Try Firebase ID token first
+    try:
+        claims = verify_firebase_token(token)
+        uid = claims.get("uid") or claims.get("user_id") or claims.get("sub")
+        if uid:
+            return {"valid": True, "user_id": uid}
+    except Exception:
+        pass
+
+    # Fallback to local HS256 JWT
     payload = verify_token(token)
-    
     if not payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token"
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     
     return {"valid": True, "user_id": payload.get("sub")}  

@@ -95,8 +95,8 @@ def verify_firebase_token(token: str) -> Dict:
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing token")
 
-    # Support mock auth when enabled (support mock-token-123)
-    if settings.MOCK_AUTH_ENABLED and token == "mock-token-123":
+    # Support mock auth when enabled (support mock-token-123 strictly in dev/test)
+    if settings.MOCK_AUTH_ENABLED and settings.ENVIRONMENT.lower() in {"development", "test"} and token == "mock-token-123":
         return {
             "uid": "demo-user-123",
             "email": "demo@whicoustic.com",

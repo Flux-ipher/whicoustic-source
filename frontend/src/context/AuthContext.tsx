@@ -4,7 +4,7 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
-  onAuthStateChanged,
+  onIdTokenChanged,
   updateProfile,
 } from 'firebase/auth';
 import { auth, googleProvider, githubProvider } from '../config/firebase';
@@ -85,28 +85,87 @@ const formatFirebaseError = (err: any): string => {
   }
 };
 
+const initializeAuthSession = (): User | null => {
+  if (typeof window === 'undefined') return null;
+
+  // Check URL query parameters for explicit cross-origin logout signal (?logged_out=true)
+  try {
+    const search = window.location.search;
+    if (search && search.includes('logged_out=true')) {
+      localStorage.setItem('whicoustic_logged_out', 'true');
+      localStorage.removeItem('whicoustic_user');
+      localStorage.removeItem('whicoustic_token');
+      clearSessionCookie();
+      return null;
+    }
+  } catch {
+    // Ignore query param error
+  }
+
+  // Tier 1: Check URL hash handoff fragment FIRST!
+  // A fresh URL hash handoff represents an active cross-origin authentication
+  // event and MUST take precedence over any stale origin-partitioned logout flag.
+  try {
+    const handoff = extractAndCleanSessionHandoff();
+    if (handoff && handoff.user && handoff.token) {
+      localStorage.setItem('whicoustic_user', JSON.stringify(handoff.user));
+      localStorage.setItem('whicoustic_token', handoff.token);
+      localStorage.removeItem('whicoustic_logged_out');
+      setSessionCookie(handoff.user, handoff.token);
+      return handoff.user;
+    }
+  } catch (err) {
+    console.warn('Tier 1 hash handoff initialization error:', err);
+  }
+
+  // If user explicitly logged out in this browser AND no fresh incoming handoff exists,
+  // prevent auto-resurrection from stale cookies or stale storage.
+  if (localStorage.getItem('whicoustic_logged_out') === 'true') {
+    return null;
+  }
+
+  // Tier 2: Check Domain-Scoped Cookie
+  try {
+    const cookieSession = getSessionCookie();
+    if (cookieSession && cookieSession.user && cookieSession.token) {
+      localStorage.setItem('whicoustic_user', JSON.stringify(cookieSession.user));
+      localStorage.setItem('whicoustic_token', cookieSession.token);
+      localStorage.removeItem('whicoustic_logged_out');
+      return cookieSession.user;
+    }
+  } catch (err) {
+    console.warn('Tier 2 cookie initialization error:', err);
+  }
+
+  // Tier 3: Check Local Storage
+  try {
+    const saved = localStorage.getItem('whicoustic_user');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.id && parsed.email) {
+        return parsed;
+      }
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+};
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { navigateToSubdomain, navigateToMainDomain } = useDomain();
 
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-
-  const [user, setUser] = useState<User | null>(() => {
-    // If explicitly logged out, do not revive session
-    if (localStorage.getItem('whicoustic_logged_out') === 'true') {
-      return null;
-    }
-
-    const saved = localStorage.getItem('whicoustic_user');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return null;
+  const [user, setUser] = useState<User | null>(() => initializeAuthSession());
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      if (localStorage.getItem('whicoustic_user') || localStorage.getItem('whicoustic_token')) {
+        return false;
       }
     }
-    return null;
+    return true;
   });
 
   const [onboardingData, setOnboardingData] = useState<OnboardingData>(() => {
@@ -285,7 +344,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+    const unsubscribe = onIdTokenChanged(auth, async (fbUser) => {
       if (localStorage.getItem('whicoustic_logged_out') === 'true') {
         return;
       }

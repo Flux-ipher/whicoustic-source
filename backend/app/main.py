@@ -16,7 +16,7 @@ from typing import Dict, Any
 from .api.v1 import auth, voices, tts, licenses, verify, verify_stream, training
 from .api.v1 import otp as otp_routes
 from .api.v1 import users as users_routes
-from .core.config import settings
+from .core.config import settings, DEFAULT_ALLOWED_ORIGINS
 from .core.database import create_tables_sync, db_manager
 from .services.tts_service import TTSService, tts_service as default_tts_service
 from .core.security import set_security_config
@@ -91,12 +91,22 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Ensure production and render origins are always in allowed CORS origins
+for origin in ["https://api.whicoustic.xyz", "https://whicoustic.onrender.com"]:
+    if origin not in DEFAULT_ALLOWED_ORIGINS:
+        DEFAULT_ALLOWED_ORIGINS.append(origin)
+
+cors_origins = list(settings.ALLOWED_ORIGINS)
+for origin in DEFAULT_ALLOWED_ORIGINS:
+    if origin not in cors_origins:
+        cors_origins.append(origin)
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
     allow_headers=["*"],
 )
 

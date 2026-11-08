@@ -6,7 +6,9 @@ Handles user registration, login, profile management, and API key generation.
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from typing import Optional
+import uuid
 
 from datetime import datetime, timedelta
 
@@ -18,6 +20,7 @@ from ...core.security import (
     get_password_hash,
     verify_token
 )
+from ...core.firebase_auth import verify_firebase_token
 from ...models.user import User
 from ...schemas.auth import (
     UserCreate, 
@@ -30,20 +33,39 @@ from ...schemas.auth import (
 )
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
+
+
+def _ensure_unique_username(db: Session, base_name: str) -> str:
+    cleaned = "".join(c if c.isalnum() or c in ("_", "-") else "_" for c in (base_name or "user")).strip("_-") or "user"
+    candidate = cleaned[:50]
+    suffix = 1
+    while db.query(User).filter(User.username == candidate).first():
+        suffix_text = f"_{suffix}"
+        max_len = max(1, 50 - len(suffix_text))
+        candidate = f"{cleaned[:max_len]}{suffix_text}"
+        suffix += 1
+    return candidate
+
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db)
 ) -> User:
-    """Get the current authenticated user from JWT token."""
-    token = credentials.credentials
-    
-    # MOCK AUTH KEY
+    """Unified authentication dependency supporting Firebase ID tokens, local JWTs, and dev mock."""
+    if credentials is None or not credentials.scheme or credentials.scheme.lower() != "bearer":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or malformed bearer token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = credentials.credentials.strip()
+
+    # 1. Dev Mock Bypass
     if settings.MOCK_AUTH_ENABLED and settings.ENVIRONMENT.lower() in {"development", "test"} and token == "mock-token-123":
         user = db.query(User).filter(User.email == "demo@whicoustic.com").first()
         if not user:
-            # Auto-create mock user if missing
             password_hash = get_password_hash("demo123")
             user = User(
                 username="demo_user",
@@ -57,27 +79,135 @@ async def get_current_user(
             db.refresh(user)
         return user
 
-    payload = verify_token(token)
-    if not payload:
+    # 2. Dual Verification: Try Firebase ID token, then fallback to local HS256 JWT
+    claims = None
+    is_firebase = False
+
+    try:
+        claims = verify_firebase_token(token)
+        is_firebase = True
+    except HTTPException:
+        claims = None
+    except Exception:
+        claims = None
+
+    if claims is None:
+        payload = verify_token(token)
+        if payload:
+            claims = payload
+            is_firebase = False
+
+    if not claims:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials"
+            detail="Invalid or expired authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-    
-    user_id = payload.get("sub")
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token payload"
-        )
-    
-    user = db.query(User).filter(User.id == user_id).first()
+
+    # 3. User Resolution & Auto-Provisioning
+    user = None
+    if not is_firebase:
+        user_id = claims.get("sub")
+        if user_id:
+            user = db.query(User).filter(User.id == str(user_id)).first()
+    else:
+        uid = (claims.get("uid") or claims.get("user_id") or claims.get("sub") or "").strip()
+        email = (claims.get("email") or "").strip()
+
+        if uid:
+            user = db.query(User).filter(User.firebase_uid == uid).first()
+        if not user and email:
+            user = db.query(User).filter(User.email.ilike(email)).first()
+            if user and user.firebase_uid and uid and user.firebase_uid != uid:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Account with this email is already linked to another identity",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            if user and uid and not user.firebase_uid:
+                user.firebase_uid = uid
+                try:
+                    db.commit()
+                    db.refresh(user)
+                except Exception:
+                    db.rollback()
+
+        # Auto-provision user if verified via Firebase but not yet present in DB
+        if not user:
+            name = claims.get("name") or (email.split("@")[0] if email else "user")
+            username = _ensure_unique_username(db, name)
+            safe_email = email or f"{uid}@auth.whicoustic.xyz"
+            user = User(
+                username=username,
+                email=safe_email,
+                firebase_uid=uid or None,
+                full_name=claims.get("name"),
+                avatar=claims.get("picture"),
+                is_active=True,
+                is_onboarded=False,
+            )
+            db.add(user)
+            try:
+                db.commit()
+                db.refresh(user)
+            except IntegrityError:
+                db.rollback()
+                user = db.query(User).filter(User.firebase_uid == uid).first() if uid else None
+                if not user and email:
+                    user = db.query(User).filter(User.email.ilike(email)).first()
+                    if user and user.firebase_uid and uid and user.firebase_uid != uid:
+                        raise HTTPException(
+                            status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Account with this email is already linked to another identity",
+                            headers={"WWW-Authenticate": "Bearer"},
+                        )
+                # If still not found, collision was on username -> retry with randomized suffix
+                if not user:
+                    cleaned_name = "".join(c if c.isalnum() or c in ("_", "-") else "_" for c in (name or "user")).strip("_-") or "user"
+                    for _ in range(5):
+                        suffix = f"_{uuid.uuid4().hex[:6]}"
+                        retry_username = f"{cleaned_name[:50 - len(suffix)]}{suffix}"
+                        user = User(
+                            username=retry_username,
+                            email=safe_email,
+                            firebase_uid=uid or None,
+                            full_name=claims.get("name"),
+                            avatar=claims.get("picture"),
+                            is_active=True,
+                            is_onboarded=False,
+                        )
+                        db.add(user)
+                        try:
+                            db.commit()
+                            db.refresh(user)
+                            break
+                        except IntegrityError:
+                            db.rollback()
+                            user = db.query(User).filter(User.firebase_uid == uid).first() if uid else None
+                            if not user and email:
+                                user = db.query(User).filter(User.email.ilike(email)).first()
+                                if user and user.firebase_uid and uid and user.firebase_uid != uid:
+                                    raise HTTPException(
+                                        status_code=status.HTTP_401_UNAUTHORIZED,
+                                        detail="Account with this email is already linked to another identity",
+                                        headers={"WWW-Authenticate": "Bearer"},
+                                    )
+                            if user:
+                                break
+
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account could not be resolved or provisioned",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is disabled"
+        )
+
     return user
 
 @router.post("/register", response_model=UserResponse)
@@ -192,9 +322,15 @@ async def create_api_key(
 
 @router.post("/verify-token")
 async def verify_access_token(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
 ):
     """Verify if the provided token is valid."""
+    if not credentials or not credentials.credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or malformed bearer token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     token = credentials.credentials
     payload = verify_token(token)
     

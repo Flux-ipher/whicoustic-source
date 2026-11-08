@@ -38,6 +38,7 @@ from ...schemas.escrow import (
 
 router = APIRouter(prefix="/licenses", tags=["licensing"])
 
+@router.post("", response_model=LicenseResponse)
 @router.post("/", response_model=LicenseResponse)
 async def create_license(
     license_data: LicenseCreate,
@@ -101,6 +102,7 @@ async def create_license(
         updated_at=license.updated_at
     )
 
+@router.get("", response_model=List[LicenseResponse])
 @router.get("/", response_model=List[LicenseResponse])
 async def list_licenses(
     voice_id: Optional[str] = None,

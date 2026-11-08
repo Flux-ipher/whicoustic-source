@@ -3,7 +3,7 @@ Voice management endpoints for Whicoustic API v1.
 Handles voice upload, processing, cloning, and management.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request, Header
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request, Header, Form
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -32,10 +32,11 @@ from ...schemas.voice import (
 router = APIRouter(prefix="/voices", tags=["voice-management"])
 
 @router.post("/upload", response_model=VoiceUploadResponse)
+@router.post("/upload/", response_model=VoiceUploadResponse)
 async def upload_voice(
     file: UploadFile = File(...),
-    name: Optional[str] = None,
-    description: Optional[str] = None,
+    name: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -115,6 +116,7 @@ async def upload_voice(
             os.unlink(temp_file_path)
         raise e
 
+@router.get("", response_model=List[VoiceResponse])
 @router.get("/", response_model=List[VoiceResponse])
 async def list_voices(
     current_user: User = Depends(get_current_user),

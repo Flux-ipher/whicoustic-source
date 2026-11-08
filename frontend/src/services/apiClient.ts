@@ -4,6 +4,8 @@
  * Zero silent mock fallbacks: network or HTTP failures throw typed ApiError instances.
  */
 
+import { auth } from '../config/firebase';
+
 export class ApiError extends Error {
   status: number;
   details?: unknown;
@@ -18,12 +20,17 @@ export class ApiError extends Error {
 }
 
 export const getApiBaseUrl = (): string => {
-  const envUrl = (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL) as string | undefined;
+  const env = typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined;
+  const envUrl = (env?.VITE_API_URL || env?.VITE_API_BASE_URL) as string | undefined;
   if (envUrl) {
     return envUrl.replace(/\/api\/v1\/?$/, '').replace(/\/+$/, '');
   }
-  // In production on whicoustic.xyz, automatically route to production API backend
-  if (typeof window !== 'undefined' && window.location.hostname.includes('whicoustic.xyz')) {
+  // In production on whicoustic.xyz or whicoustic.ai, automatically route to production API backend
+  if (
+    typeof window !== 'undefined' &&
+    (window.location.hostname.includes('whicoustic.xyz') ||
+     window.location.hostname.includes('whicoustic.ai'))
+  ) {
     return 'https://api.whicoustic.xyz';
   }
   // In development, Vite proxies '/api' to backend http://localhost:8000
@@ -45,14 +52,15 @@ export const getAuthToken = (): string | null => {
   }
 
   // Development convenience token accepted by FastAPI Mock Auth
-  if (import.meta.env.DEV) {
+  const env = typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined;
+  if (env?.DEV) {
     return 'mock-token-123';
   }
 
   return null;
 };
 
-const buildHeaders = (customHeaders?: HeadersInit, isFormData = false): Headers => {
+export const buildHeaders = (customHeaders?: HeadersInit, isFormData = false): Headers => {
   const headers = new Headers(customHeaders);
 
   if (!isFormData && !headers.has('Content-Type')) {
@@ -67,7 +75,7 @@ const buildHeaders = (customHeaders?: HeadersInit, isFormData = false): Headers 
   return headers;
 };
 
-const handleResponse = async <T>(response: Response): Promise<T> => {
+export const handleResponse = async <T>(response: Response): Promise<T> => {
   if (response.ok) {
     // 204 No Content
     if (response.status === 204) {
@@ -105,6 +113,35 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
   throw new ApiError(errorMessage, response.status, errorDetails);
 };
 
+export async function requestWithRetry<T>(
+  url: string,
+  options: RequestInit,
+  isFormData = false
+): Promise<T> {
+  let headers = buildHeaders(options.headers, isFormData);
+  let response = await fetch(url, { ...options, headers });
+
+  // 401 Token Refresh & Single Retry
+  if (response.status === 401 && auth?.currentUser) {
+    try {
+      const freshToken = await auth.currentUser.getIdToken(true);
+      if (freshToken) {
+        localStorage.setItem('whicoustic_token', freshToken);
+        const retryHeaders = new Headers(options.headers);
+        if (!isFormData && !retryHeaders.has('Content-Type')) {
+          retryHeaders.set('Content-Type', 'application/json');
+        }
+        retryHeaders.set('Authorization', `Bearer ${freshToken}`);
+        response = await fetch(url, { ...options, headers: retryHeaders });
+      }
+    } catch (refreshErr) {
+      console.warn('Firebase token refresh on 401 failed:', refreshErr);
+    }
+  }
+
+  return await handleResponse<T>(response);
+}
+
 export const apiClient = {
   baseUrl: getApiBaseUrl(),
 
@@ -120,12 +157,7 @@ export const apiClient = {
   async get<T>(path: string, options: RequestInit = {}): Promise<T> {
     const url = this.buildUrl(path);
     try {
-      const response = await fetch(url, {
-        ...options,
-        method: 'GET',
-        headers: buildHeaders(options.headers),
-      });
-      return await handleResponse<T>(response);
+      return await requestWithRetry<T>(url, { ...options, method: 'GET' }, false);
     } catch (err) {
       if (err instanceof ApiError) throw err;
       throw new ApiError(
@@ -139,13 +171,15 @@ export const apiClient = {
   async post<T>(path: string, body?: unknown, options: RequestInit = {}): Promise<T> {
     const url = this.buildUrl(path);
     try {
-      const response = await fetch(url, {
-        ...options,
-        method: 'POST',
-        headers: buildHeaders(options.headers),
-        body: body !== undefined ? JSON.stringify(body) : undefined,
-      });
-      return await handleResponse<T>(response);
+      return await requestWithRetry<T>(
+        url,
+        {
+          ...options,
+          method: 'POST',
+          body: body !== undefined ? JSON.stringify(body) : undefined,
+        },
+        false
+      );
     } catch (err) {
       if (err instanceof ApiError) throw err;
       throw new ApiError(
@@ -159,13 +193,15 @@ export const apiClient = {
   async put<T>(path: string, body?: unknown, options: RequestInit = {}): Promise<T> {
     const url = this.buildUrl(path);
     try {
-      const response = await fetch(url, {
-        ...options,
-        method: 'PUT',
-        headers: buildHeaders(options.headers),
-        body: body !== undefined ? JSON.stringify(body) : undefined,
-      });
-      return await handleResponse<T>(response);
+      return await requestWithRetry<T>(
+        url,
+        {
+          ...options,
+          method: 'PUT',
+          body: body !== undefined ? JSON.stringify(body) : undefined,
+        },
+        false
+      );
     } catch (err) {
       if (err instanceof ApiError) throw err;
       throw new ApiError(
@@ -179,12 +215,7 @@ export const apiClient = {
   async delete<T>(path: string, options: RequestInit = {}): Promise<T> {
     const url = this.buildUrl(path);
     try {
-      const response = await fetch(url, {
-        ...options,
-        method: 'DELETE',
-        headers: buildHeaders(options.headers),
-      });
-      return await handleResponse<T>(response);
+      return await requestWithRetry<T>(url, { ...options, method: 'DELETE' }, false);
     } catch (err) {
       if (err instanceof ApiError) throw err;
       throw new ApiError(
@@ -198,13 +229,15 @@ export const apiClient = {
   async upload<T>(path: string, formData: FormData, options: RequestInit = {}): Promise<T> {
     const url = this.buildUrl(path);
     try {
-      const response = await fetch(url, {
-        ...options,
-        method: 'POST',
-        headers: buildHeaders(options.headers, true),
-        body: formData,
-      });
-      return await handleResponse<T>(response);
+      return await requestWithRetry<T>(
+        url,
+        {
+          ...options,
+          method: 'POST',
+          body: formData,
+        },
+        true
+      );
     } catch (err) {
       if (err instanceof ApiError) throw err;
       throw new ApiError(

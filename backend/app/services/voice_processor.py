@@ -25,7 +25,7 @@ class VoiceProcessor:
         self.config = config or {}
         self.target_sample_rate = self.config.get('target_sample_rate', 22050)
         self.max_duration = self.config.get('max_duration', 300)  # 5 minutes
-        self.min_duration = self.config.get('min_duration', 5)   # 5 seconds
+        self.min_duration = self.config.get('min_duration', 1.0)  # 1.0 second minimum
         self.quality_threshold = self.config.get('quality_threshold', 0.7)
         
         # Audio processing settings

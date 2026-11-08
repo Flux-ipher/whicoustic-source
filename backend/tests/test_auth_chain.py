@@ -352,6 +352,88 @@ def test_voice_upload_with_firebase_token():
         assert response_slash.status_code == 200
 
 
+def test_voice_upload_mp3_and_m4a_formats():
+    """Verify POST /api/v1/voices/upload accepts standard browser audio/mpeg (MP3) and audio/x-m4a (M4A)."""
+    mock_claims = {
+        "uid": "fb_uploader_mp3",
+        "email": "mp3_uploader@whicoustic.xyz",
+        "name": "MP3 Uploader",
+    }
+    dummy_audio = b"\xff\xfb\x90\x00" + b"\x00" * 2000
+
+    with patch("app.api.v1.auth.verify_firebase_token", return_value=mock_claims), \
+         patch("app.api.v1.voices.AudioProcessor.get_audio_info_from_path", return_value={
+             "duration": 12.5,
+             "sample_rate": 44100,
+             "file_size_bytes": len(dummy_audio),
+             "quality_score": 0.88,
+         }), \
+         patch("app.api.v1.voices.voice_training_service.start_training", new_callable=AsyncMock):
+
+        # Test audio/mpeg MP3
+        files_mp3 = {"file": ("sample_voice.mp3", dummy_audio, "audio/mpeg")}
+        data_mp3 = {"name": "MP3 Demo Voice"}
+        resp_mp3 = client.post(
+            "/api/v1/voices/upload",
+            files=files_mp3,
+            data=data_mp3,
+            headers={"Authorization": "Bearer mock-fb-token-mp3"},
+        )
+        assert resp_mp3.status_code == 200, f"MP3 upload failed: {resp_mp3.text}"
+        assert resp_mp3.json()["status"] == "pending"
+
+        # Test audio/x-m4a M4A
+        files_m4a = {"file": ("sample_voice.m4a", dummy_audio, "audio/x-m4a")}
+        data_m4a = {"name": "M4A Demo Voice"}
+        resp_m4a = client.post(
+            "/api/v1/voices/upload",
+            files=files_m4a,
+            data=data_m4a,
+            headers={"Authorization": "Bearer mock-fb-token-m4a"},
+        )
+        assert resp_m4a.status_code == 200, f"M4A upload failed: {resp_m4a.text}"
+        assert resp_m4a.json()["status"] == "pending"
+
+
+def test_voice_upload_validation_guards():
+    """Verify POST /api/v1/voices/upload rejects unsupported extensions and too short audio."""
+    mock_claims = {
+        "uid": "fb_uploader_guards",
+        "email": "guards@whicoustic.xyz",
+        "name": "Guards Tester",
+    }
+    dummy_bytes = b"non_audio_binary_data"
+
+    with patch("app.api.v1.auth.verify_firebase_token", return_value=mock_claims):
+        # 1. Unsupported file format (.exe)
+        files_invalid = {"file": ("malicious.exe", dummy_bytes, "application/octet-stream")}
+        resp_invalid = client.post(
+            "/api/v1/voices/upload",
+            files=files_invalid,
+            data={"name": "Bad File"},
+            headers={"Authorization": "Bearer mock-fb-token-guards"},
+        )
+        assert resp_invalid.status_code == 400
+        assert "Unsupported file type" in resp_invalid.json()["detail"]
+
+        # 2. Too short audio (< 1.0 second)
+        with patch("app.api.v1.voices.AudioProcessor.get_audio_info_from_path", return_value={
+            "duration": 0.4,
+            "sample_rate": 16000,
+            "file_size_bytes": 100,
+            "quality_score": 0.5,
+        }):
+            files_short = {"file": ("tiny.wav", dummy_bytes, "audio/wav")}
+            resp_short = client.post(
+                "/api/v1/voices/upload",
+                files=files_short,
+                data={"name": "Tiny Audio"},
+                headers={"Authorization": "Bearer mock-fb-token-guards"},
+            )
+            assert resp_short.status_code == 400
+            assert "too short" in resp_short.json()["detail"]
+
+
 # ---------------------------------------------------------------------------
 # Tests: CORS Preflight & Allowed Origins
 # ---------------------------------------------------------------------------

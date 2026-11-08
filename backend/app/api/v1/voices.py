@@ -42,36 +42,53 @@ async def upload_voice(
 ):
     """Upload a voice sample for processing and cloning."""
     
-    # Validate file type
-    allowed_types = ['audio/wav', 'audio/mp3', 'audio/flac', 'audio/m4a']
-    if file.content_type not in allowed_types:
+    # Validate file type and extension
+    allowed_mimes = {
+        'audio/wav', 'audio/x-wav', 'audio/wave',
+        'audio/mpeg', 'audio/mp3', 'audio/x-mp3',
+        'audio/flac', 'audio/x-flac',
+        'audio/m4a', 'audio/x-m4a', 'audio/mp4', 'audio/aac',
+        'audio/ogg', 'audio/webm',
+    }
+    allowed_extensions = {'.wav', '.mp3', '.flac', '.m4a', '.mp4', '.aac', '.ogg', '.webm', '.wma'}
+
+    file_ext = os.path.splitext(file.filename or '')[1].lower()
+    raw_content_type = (file.content_type or '').split(';')[0].strip().lower()
+
+    is_valid_mime = raw_content_type in allowed_mimes
+    is_valid_ext = file_ext in allowed_extensions
+
+    if not (is_valid_mime or is_valid_ext):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported file type. Allowed: {', '.join(allowed_types)}"
+            detail=f"Unsupported file type '{raw_content_type or file_ext}'. Supported formats: MP3, WAV, FLAC, M4A, OGG, WEBM."
         )
-    
-    # Save uploaded file temporarily
-    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file.filename.split('.')[-1]}") as temp_file:
+
+    # Save uploaded file temporarily with normalized extension
+    safe_suffix = file_ext if file_ext in allowed_extensions else '.wav'
+    with tempfile.NamedTemporaryFile(delete=False, suffix=safe_suffix) as temp_file:
         content = await file.read()
         temp_file.write(content)
         temp_file_path = temp_file.name
-    
+
     try:
         # Process audio
         audio_processor = AudioProcessor()
         audio_info = await audio_processor.get_audio_info_from_path(temp_file_path)
-        
-        # Validate audio quality
-        if audio_info['duration'] < 5:  # Minimum 5 seconds
+
+        duration = audio_info.get('duration') or audio_info.get('estimated_duration') or 0.0
+
+        # Validate audio duration
+        if duration < 1.0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Audio must be at least 5 seconds long"
+                detail=f"Audio sample is too short ({duration:.1f}s). Please provide at least 1 second of audio."
             )
-        
-        if audio_info['duration'] > 300:  # Maximum 5 minutes
+
+        if duration > 300:  # Maximum 5 minutes
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Audio must be less than 5 minutes long"
+                detail=f"Audio sample is too long ({duration:.1f}s). Audio must be less than 5 minutes long."
             )
         
         # Generate unique voice ID
@@ -86,9 +103,9 @@ async def upload_voice(
             original_filename=file.filename,
             file_path=None,
             speaker_embedding=None,
-            duration=audio_info['duration'],
-            sample_rate=audio_info['sample_rate'],
-            file_size=audio_info['file_size_bytes'],
+            duration=duration,
+            sample_rate=audio_info.get('sample_rate') or 16000,
+            file_size=audio_info.get('file_size_bytes') or (os.path.getsize(temp_file_path) if os.path.exists(temp_file_path) else 0),
             status='pending',
             quality_score=audio_info.get('quality_score', 0.85)
         )

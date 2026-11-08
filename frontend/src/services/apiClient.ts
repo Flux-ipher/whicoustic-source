@@ -5,6 +5,7 @@
  */
 
 import { auth } from '../config/firebase';
+import { getSessionCookie } from '../utils/cookies';
 
 export class ApiError extends Error {
   status: number;
@@ -40,6 +41,12 @@ export const getApiBaseUrl = (): string => {
 export const getAuthToken = (): string | null => {
   const explicitToken = localStorage.getItem('whicoustic_token');
   if (explicitToken) return explicitToken;
+
+  const cookieSession = getSessionCookie();
+  if (cookieSession?.token) {
+    localStorage.setItem('whicoustic_token', cookieSession.token);
+    return cookieSession.token;
+  }
 
   const savedUser = localStorage.getItem('whicoustic_user');
   if (savedUser) {
@@ -113,6 +120,16 @@ export const handleResponse = async <T>(response: Response): Promise<T> => {
   throw new ApiError(errorMessage, response.status, errorDetails);
 };
 
+async function ensureAuthReady(): Promise<void> {
+  if (auth && typeof (auth as any).authStateReady === 'function') {
+    try {
+      await (auth as any).authStateReady();
+    } catch {
+      // Ignore auth ready error
+    }
+  }
+}
+
 export async function requestWithRetry<T>(
   url: string,
   options: RequestInit,
@@ -122,17 +139,20 @@ export async function requestWithRetry<T>(
   let response = await fetch(url, { ...options, headers });
 
   // 401 Token Refresh & Single Retry
-  if (response.status === 401 && auth?.currentUser) {
+  if (response.status === 401) {
     try {
-      const freshToken = await auth.currentUser.getIdToken(true);
-      if (freshToken) {
-        localStorage.setItem('whicoustic_token', freshToken);
-        const retryHeaders = new Headers(options.headers);
-        if (!isFormData && !retryHeaders.has('Content-Type')) {
-          retryHeaders.set('Content-Type', 'application/json');
+      await ensureAuthReady();
+      if (auth?.currentUser) {
+        const freshToken = await auth.currentUser.getIdToken(true);
+        if (freshToken) {
+          localStorage.setItem('whicoustic_token', freshToken);
+          const retryHeaders = new Headers(options.headers);
+          if (!isFormData && !retryHeaders.has('Content-Type')) {
+            retryHeaders.set('Content-Type', 'application/json');
+          }
+          retryHeaders.set('Authorization', `Bearer ${freshToken}`);
+          response = await fetch(url, { ...options, headers: retryHeaders });
         }
-        retryHeaders.set('Authorization', `Bearer ${freshToken}`);
-        response = await fetch(url, { ...options, headers: retryHeaders });
       }
     } catch (refreshErr) {
       console.warn('Firebase token refresh on 401 failed:', refreshErr);

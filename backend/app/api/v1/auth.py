@@ -324,20 +324,35 @@ async def create_api_key(
 async def verify_access_token(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
 ):
-    """Verify if the provided token is valid."""
+    """Verify if the provided token is valid (supports both Firebase ID tokens and local JWTs)."""
     if not credentials or not credentials.credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing or malformed bearer token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    token = credentials.credentials
+    token = credentials.credentials.strip()
+
+    # Dev mock token support
+    if settings.MOCK_AUTH_ENABLED and settings.ENVIRONMENT.lower() in {"development", "test"} and token == "mock-token-123":
+        return {"valid": True, "user_id": "demo-user-123"}
+
+    # Try Firebase ID token first
+    try:
+        claims = verify_firebase_token(token)
+        uid = claims.get("uid") or claims.get("user_id") or claims.get("sub")
+        if uid:
+            return {"valid": True, "user_id": uid}
+    except Exception:
+        pass
+
+    # Fallback to local HS256 JWT
     payload = verify_token(token)
-    
     if not payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token"
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     
     return {"valid": True, "user_id": payload.get("sub")}  

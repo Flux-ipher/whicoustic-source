@@ -5,7 +5,7 @@
  */
 
 import { auth } from '../config/firebase.ts';
-import { getSessionCookie } from '../utils/cookies.ts';
+import { getSessionCookie, setSessionCookie } from '../utils/cookies.ts';
 
 export class ApiError extends Error {
   status: number;
@@ -133,6 +133,27 @@ async function ensureAuthReady(): Promise<void> {
   }
 }
 
+export function persistFreshToken(token: string): void {
+  try {
+    localStorage.setItem('whicoustic_token', token);
+    const savedUser = localStorage.getItem('whicoustic_user');
+    if (savedUser) {
+      try {
+        const user = JSON.parse(savedUser);
+        if (user && typeof user === 'object') {
+          user.token = token;
+          localStorage.setItem('whicoustic_user', JSON.stringify(user));
+          setSessionCookie(user, token);
+        }
+      } catch {
+        // Ignore user json parse error
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to persist fresh token across storage and cookies:', err);
+  }
+}
+
 export async function requestWithRetry<T>(
   url: string,
   options: RequestInit,
@@ -146,7 +167,7 @@ export async function requestWithRetry<T>(
       try {
         token = await auth.currentUser.getIdToken();
         if (token) {
-          localStorage.setItem('whicoustic_token', token);
+          persistFreshToken(token);
         }
       } catch (tokenErr) {
         console.warn('Initial token acquisition deferred:', tokenErr);
@@ -168,7 +189,7 @@ export async function requestWithRetry<T>(
       if (auth?.currentUser) {
         const freshToken = await auth.currentUser.getIdToken(true);
         if (freshToken) {
-          localStorage.setItem('whicoustic_token', freshToken);
+          persistFreshToken(freshToken);
           const retryHeaders = new Headers(headers);
           retryHeaders.set('Authorization', `Bearer ${freshToken}`);
           response = await fetch(url, { ...options, headers: retryHeaders });

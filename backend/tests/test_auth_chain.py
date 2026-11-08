@@ -739,6 +739,63 @@ def test_voices_endpoints_reject_invalid_or_missing_tokens():
     assert "WWW-Authenticate" in resp_post_bad_token.headers
 
 
+def test_verify_access_token_endpoint_with_firebase_and_local_tokens():
+    """Verify POST /api/v1/auth/verify-token supports Firebase ID tokens, local JWTs, and rejects invalid tokens with 401."""
+    # 1. Local JWT token
+    local_token = create_access_token(data={"sub": "local_user_77"})
+    resp_local = client.post("/api/v1/auth/verify-token", headers={"Authorization": f"Bearer {local_token}"})
+    assert resp_local.status_code == 200
+    assert resp_local.json()["valid"] is True
+    assert resp_local.json()["user_id"] == "local_user_77"
+
+    # 2. Firebase ID token
+    mock_fb_claims = {
+        "uid": "fb_verified_user_99",
+        "email": "verified@whicoustic.xyz",
+        "name": "Verified User",
+        "is_admin": False,
+    }
+    with patch("app.api.v1.auth.verify_firebase_token", return_value=mock_fb_claims):
+        resp_fb = client.post("/api/v1/auth/verify-token", headers={"Authorization": "Bearer fb-valid-token-99"})
+        assert resp_fb.status_code == 200
+        assert resp_fb.json()["valid"] is True
+        assert resp_fb.json()["user_id"] == "fb_verified_user_99"
+
+    # 3. Invalid token returns 401 with WWW-Authenticate header
+    resp_invalid = client.post("/api/v1/auth/verify-token", headers={"Authorization": "Bearer invalid-garbage-token"})
+    assert resp_invalid.status_code == 401
+    assert "WWW-Authenticate" in resp_invalid.headers
+    assert "Bearer" in resp_invalid.headers["WWW-Authenticate"]
+
+    # 4. Missing token returns 401
+    resp_missing = client.post("/api/v1/auth/verify-token")
+    assert resp_missing.status_code == 401
+    assert "WWW-Authenticate" in resp_missing.headers
+
+
+def test_firebase_token_clock_skew_tolerance():
+    """Verify verify_firebase_token passes clock_skew_in_seconds=10 to google verifier."""
+    from app.core import firebase_auth
+    from unittest.mock import MagicMock
+
+    mock_google_decoded = {
+        "sub": "skew_user_1",
+        "email": "skew@whicoustic.xyz",
+        "name": "Skew User",
+    }
+    mock_verifier = MagicMock(return_value=mock_google_decoded)
+
+    with patch.object(firebase_auth, "firebase_admin", None), \
+         patch.object(firebase_auth.google_id_token, "verify_firebase_token", mock_verifier):
+
+        claims = firebase_auth.verify_firebase_token("token-with-slight-drift")
+        assert claims["uid"] == "skew_user_1"
+        assert mock_verifier.called
+        # Verify clock_skew_in_seconds was passed as 10
+        kwargs = mock_verifier.call_args.kwargs
+        assert kwargs.get("clock_skew_in_seconds") == 10
+
+
 # ---------------------------------------------------------------------------
 # Standalone Runner
 # ---------------------------------------------------------------------------
@@ -786,6 +843,10 @@ if __name__ == "__main__":
     print("  [PASS] test_voices_list_and_upload_with_google_cert_fallback_token")
     test_voices_endpoints_reject_invalid_or_missing_tokens()
     print("  [PASS] test_voices_endpoints_reject_invalid_or_missing_tokens")
+    test_verify_access_token_endpoint_with_firebase_and_local_tokens()
+    print("  [PASS] test_verify_access_token_endpoint_with_firebase_and_local_tokens")
+    test_firebase_token_clock_skew_tolerance()
+    print("  [PASS] test_firebase_token_clock_skew_tolerance")
     print("=======================================================================")
-    print("ALL 20 VERIFICATION TESTS PASSED (100%)!")
+    print("ALL 22 VERIFICATION TESTS PASSED (100%)!")
     print("=======================================================================")

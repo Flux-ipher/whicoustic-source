@@ -32,6 +32,18 @@ except Exception:  # pragma: no cover
     google_id_token = None  # type: ignore
     google_requests = None  # type: ignore
 
+_google_auth_request = None
+
+
+def _get_google_auth_request():
+    global _google_auth_request
+    if _google_auth_request is None and google_requests is not None:
+        try:
+            _google_auth_request = google_requests.Request()
+        except Exception:
+            _google_auth_request = None
+    return _google_auth_request
+
 
 security = HTTPBearer(auto_error=False)
 
@@ -138,14 +150,14 @@ def verify_firebase_token(token: str) -> Dict:
     if decoded is None:
         if google_id_token is not None and google_requests is not None:
             try:
-                req = google_requests.Request()
+                req = _get_google_auth_request() or google_requests.Request()
                 project_id = settings.FIREBASE_PROJECT_ID if (settings.FIREBASE_PROJECT_ID and settings.FIREBASE_PROJECT_ID != "dummy") else "whicoustic-studios"
                 try:
-                    decoded = google_id_token.verify_firebase_token(token, req, audience=project_id)
+                    decoded = google_id_token.verify_firebase_token(token, req, audience=project_id, clock_skew_in_seconds=10)
                 except Exception:
                     # Audience check might fail if token was issued for another audience, or if audience is None
                     try:
-                        decoded = google_id_token.verify_firebase_token(token, req, audience=None)
+                        decoded = google_id_token.verify_firebase_token(token, req, audience=None, clock_skew_in_seconds=10)
                     except Exception:
                         raise
             except Exception:

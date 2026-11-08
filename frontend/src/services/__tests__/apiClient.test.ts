@@ -16,6 +16,7 @@ import {
   buildHeaders,
   handleResponse,
   requestWithRetry,
+  persistFreshToken,
   ApiError,
   getApiBaseUrl,
 } from '../apiClient.ts';
@@ -343,6 +344,27 @@ export async function runApiClientTests(): Promise<{ passed: number; failed: num
           globalThis.fetch = originalFetch;
           setAuthForTesting(originalAuth);
         }
+      },
+    },
+    {
+      name: 'persistFreshToken synchronizes whicoustic_token and whicoustic_user in localStorage',
+      fn: () => {
+        localStorage.clear();
+        const userObj = { id: 'u_sync', email: 'sync@whicoustic.xyz', token: 'old-tok' };
+        localStorage.setItem('whicoustic_user', JSON.stringify(userObj));
+        persistFreshToken('brand-new-synced-token');
+
+        assertEqual(
+          localStorage.getItem('whicoustic_token'),
+          'brand-new-synced-token',
+          'whicoustic_token must be updated'
+        );
+        const updatedUser = JSON.parse(localStorage.getItem('whicoustic_user') || '{}');
+        assertEqual(
+          updatedUser.token,
+          'brand-new-synced-token',
+          'whicoustic_user.token must be synchronized with fresh token'
+        );
       },
     },
   ];

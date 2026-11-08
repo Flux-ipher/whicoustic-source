@@ -118,13 +118,8 @@ const initializeAuthSession = (): User | null => {
     console.warn('Tier 1 hash handoff initialization error:', err);
   }
 
-  // If user explicitly logged out in this browser AND no fresh incoming handoff exists,
-  // prevent auto-resurrection from stale cookies or stale storage.
-  if (localStorage.getItem('whicoustic_logged_out') === 'true') {
-    return null;
-  }
-
-  // Tier 2: Check Domain-Scoped Cookie
+  // Tier 2: Check Domain-Scoped Cookie FIRST before origin-partitioned logout flag!
+  // If the browser holds a valid domain session cookie, the user is authenticated.
   try {
     const cookieSession = getSessionCookie();
     if (cookieSession && cookieSession.user && cookieSession.token) {
@@ -135,6 +130,12 @@ const initializeAuthSession = (): User | null => {
     }
   } catch (err) {
     console.warn('Tier 2 cookie initialization error:', err);
+  }
+
+  // If user explicitly logged out in this browser AND no fresh incoming handoff or domain cookie exists,
+  // prevent auto-resurrection from stale localStorage.
+  if (localStorage.getItem('whicoustic_logged_out') === 'true') {
+    return null;
   }
 
   // Tier 3: Check Local Storage
@@ -231,15 +232,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      // If user explicitly logged out in this browser AND no fresh incoming handoff exists,
-      // prevent auto-resurrection from stale cookies or stale storage.
-      if (localStorage.getItem('whicoustic_logged_out') === 'true') {
-        setUser(null);
-        setIsLoading(false);
-        return;
-      }
-
-      // Tier 2: Check Domain-Scoped Cookie
+      // Tier 2: Check Domain-Scoped Cookie FIRST before origin-partitioned logout flag!
+      // If the browser holds a valid domain session cookie, the user is authenticated.
       try {
         const cookieSession = getSessionCookie();
         if (cookieSession && cookieSession.user && cookieSession.token) {
@@ -252,6 +246,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (err) {
         console.warn('Tier 2 cookie hydration error:', err);
+      }
+
+      // If user explicitly logged out in this browser AND no fresh incoming handoff or domain cookie exists,
+      // prevent auto-resurrection from stale localStorage.
+      if (localStorage.getItem('whicoustic_logged_out') === 'true') {
+        setUser(null);
+        setIsLoading(false);
+        return;
       }
 
       // Tier 3: Check Local Storage
@@ -291,7 +293,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const syncWithBackend = async (
     token: string,
-    fbUser: { uid: string; email: string | null; displayName: string | null; photoURL: string | null },
+    fbUser: { uid?: string; email: string | null; displayName: string | null; photoURL: string | null },
     name?: string,
     extraData?: BackendSyncExtraData
   ) => {
@@ -345,11 +347,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const unsubscribe = onIdTokenChanged(auth, async (fbUser) => {
-      if (localStorage.getItem('whicoustic_logged_out') === 'true') {
-        return;
-      }
-
       if (fbUser) {
+        // Authenticated user exists in Firebase - clear any stale origin-partitioned logout flag
+        localStorage.removeItem('whicoustic_logged_out');
         try {
           const token = await fbUser.getIdToken();
           localStorage.setItem('whicoustic_token', token);
@@ -357,9 +357,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const synced = await syncWithBackend(token, fbUser);
 
           setUser((prev) => {
-            const isOnboarded = synced?.is_onboarded !== undefined
-              ? Boolean(synced.is_onboarded)
-              : (prev?.isOnboarded ?? false);
+            // Monotonic onboarding preservation: never demote True to False
+            const isOnboarded = (prev?.isOnboarded === true) || Boolean(synced?.is_onboarded);
+
+            // Proactively sync onboarding state to backend if client is onboarded but backend is not
+            if (isOnboarded && synced && !synced.is_onboarded) {
+              syncWithBackend(token, fbUser, undefined, { is_onboarded: true }).catch(() => {});
+            }
 
             if (!prev) {
               const restored: User = {
@@ -388,6 +392,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
         } catch (tokenErr) {
           console.warn('Failed to retrieve Firebase ID token or sync profile:', tokenErr);
+        }
+      } else {
+        // User is not signed in to Firebase
+        if (localStorage.getItem('whicoustic_logged_out') === 'true') {
+          setUser(null);
         }
       }
     });
@@ -558,10 +567,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const synced = await syncWithBackend(
           token,
           {
-            uid: auth?.currentUser?.uid || user?.id || '',
-            email: user?.email || null,
-            displayName: user?.name || null,
-            photoURL: user?.avatar || null,
+            uid: auth?.currentUser?.uid || undefined,
+            email: user?.email || auth?.currentUser?.email || null,
+            displayName: user?.name || auth?.currentUser?.displayName || null,
+            photoURL: user?.avatar || auth?.currentUser?.photoURL || null,
           },
           user?.name,
           {

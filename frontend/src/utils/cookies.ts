@@ -142,13 +142,18 @@ export function parseSessionCookieString(
           return null;
         }
 
-        if (!user.id || !user.email || typeof user.isOnboarded !== 'boolean') {
+        if (!user.id || !user.email) {
           return null;
         }
+
+        const isOnboarded = user.isOnboarded !== undefined
+          ? Boolean(user.isOnboarded)
+          : false;
 
         return {
           user: {
             ...user,
+            isOnboarded,
             token: user.token || token,
           },
           token,

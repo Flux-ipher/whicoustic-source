@@ -18,8 +18,8 @@ import {
   requestWithRetry,
   ApiError,
   getApiBaseUrl,
-} from '../apiClient';
-import { auth } from '../../config/firebase';
+} from '../apiClient.ts';
+import { auth, setAuthForTesting } from '../../config/firebase.ts';
 
 // In-memory mock for environments without a fully featured localStorage (e.g. Node 22+)
 if (!globalThis.localStorage || typeof (globalThis.localStorage as any).clear !== 'function') {
@@ -193,14 +193,17 @@ export async function runApiClientTests(): Promise<{ passed: number; failed: num
         }) as typeof fetch;
 
         // Mock Firebase auth currentUser
-        const originalUser = (auth as any)?.currentUser;
+        const originalAuth = auth;
         let getIdTokenCalled = false;
-        (auth as any).currentUser = {
-          getIdToken: async (forceRefresh?: boolean) => {
-            if (forceRefresh) getIdTokenCalled = true;
-            return 'freshly-refreshed-firebase-token-999';
+        setAuthForTesting({
+          authStateReady: async () => {},
+          currentUser: {
+            getIdToken: async (forceRefresh?: boolean) => {
+              if (forceRefresh) getIdTokenCalled = true;
+              return 'freshly-refreshed-firebase-token-999';
+            },
           },
-        };
+        });
 
         try {
           const result = await requestWithRetry<{ success: boolean; count: number }>(
@@ -223,9 +226,122 @@ export async function runApiClientTests(): Promise<{ passed: number; failed: num
           assertEqual(result.success, true, 'Result from retried request should be returned');
         } finally {
           globalThis.fetch = originalFetch;
-          if (auth) {
-            (auth as any).currentUser = originalUser;
+          setAuthForTesting(originalAuth);
+        }
+      },
+    },
+    {
+      name: 'requestWithRetry proactively acquires token from auth.currentUser when storage is empty',
+      fn: async () => {
+        localStorage.clear();
+
+        let initialAuthHeader: string | null = null;
+        let fetchCallCount = 0;
+        const originalFetch = globalThis.fetch;
+
+        globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+          fetchCallCount++;
+          const headers = new Headers(init?.headers);
+          initialAuthHeader = headers.get('Authorization');
+          return new Response(JSON.stringify([{ id: 'voice_1', name: 'Test Voice' }]), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }) as typeof fetch;
+
+        const originalAuth = auth;
+        setAuthForTesting({
+          authStateReady: async () => {},
+          currentUser: {
+            getIdToken: async () => 'proactively-acquired-fb-token-888',
+          },
+        });
+
+        try {
+          const data = await requestWithRetry<Array<{ id: string }>>(
+            'https://api.whicoustic.xyz/api/v1/voices/',
+            { method: 'GET' }
+          );
+
+          assertEqual(fetchCallCount, 1, 'Proactive acquisition should succeed on first call without 401');
+          assertEqual(
+            initialAuthHeader,
+            'Bearer proactively-acquired-fb-token-888',
+            'Initial request must include proactively acquired Bearer token'
+          );
+          assertEqual(
+            localStorage.getItem('whicoustic_token'),
+            'proactively-acquired-fb-token-888',
+            'Token should be cached in localStorage'
+          );
+          assertEqual(data.length, 1, 'Returned voices array should match');
+        } finally {
+          globalThis.fetch = originalFetch;
+          setAuthForTesting(originalAuth);
+        }
+      },
+    },
+    {
+      name: 'requestWithRetry preserves multipart form-data without Content-Type override on 401 retry',
+      fn: async () => {
+        localStorage.clear();
+        localStorage.setItem('whicoustic_token', 'stale-upload-token');
+
+        let fetchCallCount = 0;
+        let retryContentType: string | null = null;
+        let retryAuthHeader: string | null = null;
+        const originalFetch = globalThis.fetch;
+
+        globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+          fetchCallCount++;
+          const headers = new Headers(init?.headers);
+          if (fetchCallCount === 1) {
+            return new Response(JSON.stringify({ detail: 'Token expired' }), {
+              status: 401,
+              headers: { 'Content-Type': 'application/json' },
+            });
           }
+          retryContentType = headers.get('Content-Type');
+          retryAuthHeader = headers.get('Authorization');
+          return new Response(JSON.stringify({ voice_id: 'voice_uploaded_1', status: 'pending' }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }) as typeof fetch;
+
+        const originalAuth = auth;
+        setAuthForTesting({
+          authStateReady: async () => {},
+          currentUser: {
+            getIdToken: async () => 'fresh-upload-token-777',
+          },
+        });
+
+        try {
+          const formData = new FormData();
+          formData.append('name', 'My Voice');
+
+          const uploadResult = await requestWithRetry<{ voice_id: string; status: string }>(
+            'https://api.whicoustic.xyz/api/v1/voices/upload',
+            { method: 'POST', body: formData },
+            true
+          );
+
+          assertEqual(fetchCallCount, 2, 'Upload request should be retried once on 401');
+          assertEqual(
+            retryAuthHeader,
+            'Bearer fresh-upload-token-777',
+            'Retried upload request must include fresh Bearer token'
+          );
+          assertEqual(
+            retryContentType,
+            null,
+            'Content-Type header must NOT be overwritten to application/json for FormData'
+          );
+          assertEqual(uploadResult.voice_id, 'voice_uploaded_1', 'Upload result must match');
+        } finally {
+          globalThis.fetch = originalFetch;
+          setAuthForTesting(originalAuth);
         }
       },
     },

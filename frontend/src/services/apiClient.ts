@@ -4,8 +4,8 @@
  * Zero silent mock fallbacks: network or HTTP failures throw typed ApiError instances.
  */
 
-import { auth } from '../config/firebase';
-import { getSessionCookie } from '../utils/cookies';
+import { auth } from '../config/firebase.ts';
+import { getSessionCookie } from '../utils/cookies.ts';
 
 export class ApiError extends Error {
   status: number;
@@ -52,7 +52,10 @@ export const getAuthToken = (): string | null => {
   if (savedUser) {
     try {
       const parsed = JSON.parse(savedUser);
-      if (parsed.token) return parsed.token;
+      if (parsed.token) {
+        localStorage.setItem('whicoustic_token', parsed.token);
+        return parsed.token;
+      }
     } catch {
       // Ignore parse failure
     }
@@ -135,10 +138,30 @@ export async function requestWithRetry<T>(
   options: RequestInit,
   isFormData = false
 ): Promise<T> {
+  // 1. Proactive auth initialization check if no token found in storage
+  let token = getAuthToken();
+  if (!token && auth) {
+    await ensureAuthReady();
+    if (auth.currentUser) {
+      try {
+        token = await auth.currentUser.getIdToken();
+        if (token) {
+          localStorage.setItem('whicoustic_token', token);
+        }
+      } catch (tokenErr) {
+        console.warn('Initial token acquisition deferred:', tokenErr);
+      }
+    }
+  }
+
   let headers = buildHeaders(options.headers, isFormData);
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
   let response = await fetch(url, { ...options, headers });
 
-  // 401 Token Refresh & Single Retry
+  // 2. 401 Token Refresh & Single Retry
   if (response.status === 401) {
     try {
       await ensureAuthReady();
@@ -146,10 +169,7 @@ export async function requestWithRetry<T>(
         const freshToken = await auth.currentUser.getIdToken(true);
         if (freshToken) {
           localStorage.setItem('whicoustic_token', freshToken);
-          const retryHeaders = new Headers(options.headers);
-          if (!isFormData && !retryHeaders.has('Content-Type')) {
-            retryHeaders.set('Content-Type', 'application/json');
-          }
+          const retryHeaders = new Headers(headers);
           retryHeaders.set('Authorization', `Bearer ${freshToken}`);
           response = await fetch(url, { ...options, headers: retryHeaders });
         }

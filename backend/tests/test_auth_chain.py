@@ -593,6 +593,152 @@ def test_firebase_auth_mock_token_production_rejected():
         settings.MOCK_AUTH_ENABLED = orig_mock
 
 
+def test_firebase_auth_core_verify_token_fallback_on_admin_failure():
+    """Verify that verify_firebase_token falls back to google.oauth2.id_token when Firebase Admin fails."""
+    from unittest.mock import MagicMock
+    from app.core import firebase_auth
+    from app.core.firebase_auth import verify_firebase_token
+
+    mock_google_decoded = {
+        "sub": "fb_fallback_user_1",
+        "email": "fallback_user@whicoustic.xyz",
+        "name": "Fallback User",
+        "picture": "https://whicoustic.xyz/avatar.png",
+    }
+
+    mock_fb_admin = MagicMock()
+    mock_fb_auth = MagicMock()
+    mock_fb_auth.verify_id_token.side_effect = Exception("Service account mismatch or revoked")
+
+    with patch.object(firebase_auth, "firebase_admin", mock_fb_admin), \
+         patch.object(firebase_auth, "fb_auth", mock_fb_auth), \
+         patch.object(firebase_auth, "_ensure_firebase_app", return_value=None), \
+         patch.object(firebase_auth.google_id_token, "verify_firebase_token", return_value=mock_google_decoded):
+
+        claims = verify_firebase_token("valid-google-public-token-abc")
+        assert claims["uid"] == "fb_fallback_user_1"
+        assert claims["email"] == "fallback_user@whicoustic.xyz"
+        assert claims["name"] == "Fallback User"
+        assert claims["picture"] == "https://whicoustic.xyz/avatar.png"
+        assert "is_admin" in claims
+
+
+def test_firebase_auth_core_get_current_user_dependency():
+    """Verify app.core.firebase_auth.get_current_user enforces Bearer scheme and returns claims."""
+    import asyncio
+    from fastapi import HTTPException
+    from app.core.firebase_auth import get_current_user as core_get_current_user
+    from fastapi.security import HTTPAuthorizationCredentials
+
+    # 1. Missing credentials header -> 401
+    with pytest.raises(HTTPException) as exc_info:
+        asyncio.run(core_get_current_user(None))
+    assert exc_info.value.status_code == 401
+    assert "WWW-Authenticate" in exc_info.value.headers
+    assert "Bearer" in exc_info.value.headers["WWW-Authenticate"]
+
+    # 2. Invalid scheme -> 401
+    with pytest.raises(HTTPException) as exc_info_scheme:
+        asyncio.run(core_get_current_user(HTTPAuthorizationCredentials(scheme="Basic", credentials="xyz")))
+    assert exc_info_scheme.value.status_code == 401
+
+    # 3. Valid Bearer credentials
+    mock_claims = {
+        "uid": "core_user_1",
+        "email": "core@whicoustic.xyz",
+        "name": "Core User",
+        "is_admin": False,
+    }
+    with patch("app.core.firebase_auth.verify_firebase_token", return_value=mock_claims):
+        creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials="token-core-1")
+        resolved = asyncio.run(core_get_current_user(creds))
+        assert resolved["uid"] == "core_user_1"
+        assert resolved["email"] == "core@whicoustic.xyz"
+
+
+def test_voices_list_and_upload_with_google_cert_fallback_token():
+    """Verify GET /api/v1/voices/ and POST /api/v1/voices/upload succeed when token verified via Google cert fallback."""
+    from unittest.mock import MagicMock
+    from app.core import firebase_auth
+
+    mock_google_decoded = {
+        "sub": "fb_cert_uploader",
+        "email": "cert_uploader@whicoustic.xyz",
+        "name": "Cert Uploader",
+        "picture": None,
+    }
+    dummy_wav = b"RIFF" + struct.pack("<I", 44 + 4000) + b"WAVEfmt " + struct.pack("<IHHIIHH", 16, 1, 1, 16000, 32000, 2, 16) + b"data" + struct.pack("<I", 4000) + (b"\x00\x00" * 2000)
+
+    mock_fb_admin = MagicMock()
+    mock_fb_auth = MagicMock()
+    mock_fb_auth.verify_id_token.side_effect = Exception("Project mismatch on service account")
+
+    with patch.object(firebase_auth, "firebase_admin", mock_fb_admin), \
+         patch.object(firebase_auth, "fb_auth", mock_fb_auth), \
+         patch.object(firebase_auth, "_ensure_firebase_app", return_value=None), \
+         patch.object(firebase_auth.google_id_token, "verify_firebase_token", return_value=mock_google_decoded), \
+         patch("app.api.v1.voices.AudioProcessor.get_audio_info_from_path", return_value={
+             "duration": 5.0,
+             "sample_rate": 16000,
+             "file_size_bytes": len(dummy_wav),
+             "quality_score": 0.95,
+         }), \
+         patch("app.api.v1.voices.voice_training_service.start_training", new_callable=AsyncMock):
+
+        # 1. GET /api/v1/voices/
+        resp_get = client.get("/api/v1/voices/", headers={"Authorization": "Bearer google-cert-token-xyz"})
+        assert resp_get.status_code == 200, f"Expected 200, got {resp_get.status_code}: {resp_get.text}"
+        assert isinstance(resp_get.json(), list)
+
+        # 2. POST /api/v1/voices/upload
+        files = {"file": ("demo_cert.wav", dummy_wav, "audio/wav")}
+        data = {"name": "Cert Fallback Voice"}
+        resp_post = client.post(
+            "/api/v1/voices/upload",
+            files=files,
+            data=data,
+            headers={"Authorization": "Bearer google-cert-token-xyz"}
+        )
+        assert resp_post.status_code == 200, f"Expected 200, got {resp_post.status_code}: {resp_post.text}"
+        assert resp_post.json()["name"] == "Cert Fallback Voice"
+        assert resp_post.json()["status"] == "pending"
+
+
+def test_voices_endpoints_reject_invalid_or_missing_tokens():
+    """Verify GET and POST voice endpoints reject unauthenticated or malformed requests with 401."""
+    dummy_wav = b"RIFF" + struct.pack("<I", 44 + 100) + b"WAVEfmt " + struct.pack("<IHHIIHH", 16, 1, 1, 16000, 32000, 2, 16) + b"data" + struct.pack("<I", 100) + (b"\x00" * 100)
+
+    # 1. GET /api/v1/voices/ without header
+    resp_get_no_token = client.get("/api/v1/voices/")
+    assert resp_get_no_token.status_code == 401
+    assert "WWW-Authenticate" in resp_get_no_token.headers
+    assert "Bearer" in resp_get_no_token.headers["WWW-Authenticate"]
+
+    # 2. GET /api/v1/voices/ with malformed token
+    resp_get_bad_token = client.get("/api/v1/voices/", headers={"Authorization": "Bearer totally-invalid-token"})
+    assert resp_get_bad_token.status_code == 401
+    assert "WWW-Authenticate" in resp_get_bad_token.headers
+
+    # 3. POST /api/v1/voices/upload without header
+    resp_post_no_token = client.post(
+        "/api/v1/voices/upload",
+        files={"file": ("test.wav", dummy_wav, "audio/wav")},
+        data={"name": "No Token"}
+    )
+    assert resp_post_no_token.status_code == 401
+    assert "WWW-Authenticate" in resp_post_no_token.headers
+
+    # 4. POST /api/v1/voices/upload with malformed token
+    resp_post_bad_token = client.post(
+        "/api/v1/voices/upload",
+        files={"file": ("test.wav", dummy_wav, "audio/wav")},
+        data={"name": "Bad Token"},
+        headers={"Authorization": "Bearer invalid.malformed.jwt"}
+    )
+    assert resp_post_bad_token.status_code == 401
+    assert "WWW-Authenticate" in resp_post_bad_token.headers
+
+
 # ---------------------------------------------------------------------------
 # Standalone Runner
 # ---------------------------------------------------------------------------
@@ -632,6 +778,14 @@ if __name__ == "__main__":
     print("  [PASS] test_firebase_token_auto_provisioning_username_collision_recovery")
     test_firebase_auth_mock_token_production_rejected()
     print("  [PASS] test_firebase_auth_mock_token_production_rejected")
+    test_firebase_auth_core_verify_token_fallback_on_admin_failure()
+    print("  [PASS] test_firebase_auth_core_verify_token_fallback_on_admin_failure")
+    test_firebase_auth_core_get_current_user_dependency()
+    print("  [PASS] test_firebase_auth_core_get_current_user_dependency")
+    test_voices_list_and_upload_with_google_cert_fallback_token()
+    print("  [PASS] test_voices_list_and_upload_with_google_cert_fallback_token")
+    test_voices_endpoints_reject_invalid_or_missing_tokens()
+    print("  [PASS] test_voices_endpoints_reject_invalid_or_missing_tokens")
     print("=======================================================================")
-    print("ALL 16 VERIFICATION TESTS PASSED (100%)!")
+    print("ALL 20 VERIFICATION TESTS PASSED (100%)!")
     print("=======================================================================")

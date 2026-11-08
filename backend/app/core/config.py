@@ -92,7 +92,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = Field(default="redis://localhost:6379", env="REDIS_URL")
 
     # Firebase Configuration
-    FIREBASE_PROJECT_ID: str = Field(default="", env="FIREBASE_PROJECT_ID")
+    FIREBASE_PROJECT_ID: str = Field(default="whicoustic-studios", env="FIREBASE_PROJECT_ID")
     FIREBASE_API_KEY: str = Field(default="", env="FIREBASE_API_KEY")
     FIREBASE_AUTH_DOMAIN: str = Field(default="", env="FIREBASE_AUTH_DOMAIN")
     FIREBASE_STORAGE_BUCKET: str = Field(default="", env="FIREBASE_STORAGE_BUCKET")

@@ -1,23 +1,24 @@
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import {
   getAuth,
   GoogleAuthProvider,
   GithubAuthProvider,
-  Auth,
+  type Auth,
   browserLocalPersistence,
   setPersistence,
 } from 'firebase/auth';
 
-const apiKey = (import.meta.env.VITE_FIREBASE_API_KEY as string) || '';
+const env = (typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined) || {};
+const apiKey = (env.VITE_FIREBASE_API_KEY as string) || '';
 
 const firebaseConfig = {
   apiKey,
-  authDomain: (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string) || '',
-  projectId: (import.meta.env.VITE_FIREBASE_PROJECT_ID as string) || '',
-  storageBucket: (import.meta.env.VITE_FIREBASE_STORAGE_BUCKET as string) || '',
-  messagingSenderId: (import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID as string) || '',
-  appId: (import.meta.env.VITE_FIREBASE_APP_ID as string) || '',
-  measurementId: (import.meta.env.VITE_FIREBASE_MEASUREMENT_ID as string) || '',
+  authDomain: (env.VITE_FIREBASE_AUTH_DOMAIN as string) || '',
+  projectId: (env.VITE_FIREBASE_PROJECT_ID as string) || '',
+  storageBucket: (env.VITE_FIREBASE_STORAGE_BUCKET as string) || '',
+  messagingSenderId: (env.VITE_FIREBASE_MESSAGING_SENDER_ID as string) || '',
+  appId: (env.VITE_FIREBASE_APP_ID as string) || '',
+  measurementId: (env.VITE_FIREBASE_MEASUREMENT_ID as string) || '',
 };
 
 export const isFirebaseConfigured = Boolean(
@@ -45,6 +46,10 @@ if (isFirebaseConfigured) {
 }
 
 export const app = appInstance;
-export const auth = authInstance;
+export let auth = authInstance;
 export const googleProvider = new GoogleAuthProvider();
 export const githubProvider = new GithubAuthProvider();
+
+export function setAuthForTesting(mockAuth: any): void {
+  auth = mockAuth;
+}

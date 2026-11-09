@@ -505,6 +505,7 @@ async def localize_partial_fakes(
 
 
 @router.get("/history")
+@router.get("/history/")
 async def get_verification_history(
     limit: int = 20,
     watermark_found: Optional[bool] = None,
@@ -538,7 +539,43 @@ async def get_verification_history(
         for verification in verifications
     ]
 
+@router.get("/stats")
+@router.get("/stats/")
+async def get_verification_stats(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get verification statistics for the current user."""
+    
+    verifications = db.query(WatermarkVerification).filter(
+        WatermarkVerification.user_id == current_user.id
+    ).all()
+    
+    total_verifications = len(verifications)
+    watermarks_found = len([v for v in verifications if v.watermark_found])
+    avg_confidence = sum(v.confidence_score for v in verifications) / max(1, total_verifications)
+    
+    # Method breakdown
+    method_stats = {}
+    for verification in verifications:
+        method = verification.detection_method
+        if method not in method_stats:
+            method_stats[method] = {'count': 0, 'found': 0}
+        method_stats[method]['count'] += 1
+        if verification.watermark_found:
+            method_stats[method]['found'] += 1
+    
+    return {
+        "total_verifications": total_verifications,
+        "watermarks_found": watermarks_found,
+        "success_rate": watermarks_found / max(1, total_verifications),
+        "average_confidence": avg_confidence,
+        "method_breakdown": method_stats,
+        "last_verification": max(v.verified_at for v in verifications) if verifications else None
+    }
+
 @router.get("/{verification_id}")
+@router.get("/{verification_id}/")
 async def get_verification_details(
     verification_id: str,
     current_user: User = Depends(get_current_user),
@@ -660,38 +697,4 @@ async def batch_verify_watermarks(
         "total_files": len(files),
         "processed_files": len(results),
         "results": results
-    }
-
-@router.get("/stats")
-async def get_verification_stats(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get verification statistics for the current user."""
-    
-    verifications = db.query(WatermarkVerification).filter(
-        WatermarkVerification.user_id == current_user.id
-    ).all()
-    
-    total_verifications = len(verifications)
-    watermarks_found = len([v for v in verifications if v.watermark_found])
-    avg_confidence = sum(v.confidence_score for v in verifications) / max(1, total_verifications)
-    
-    # Method breakdown
-    method_stats = {}
-    for verification in verifications:
-        method = verification.detection_method
-        if method not in method_stats:
-            method_stats[method] = {'count': 0, 'found': 0}
-        method_stats[method]['count'] += 1
-        if verification.watermark_found:
-            method_stats[method]['found'] += 1
-    
-    return {
-        "total_verifications": total_verifications,
-        "watermarks_found": watermarks_found,
-        "success_rate": watermarks_found / max(1, total_verifications),
-        "average_confidence": avg_confidence,
-        "method_breakdown": method_stats,
-        "last_verification": max(v.verified_at for v in verifications) if verifications else None
     }

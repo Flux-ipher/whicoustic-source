@@ -306,6 +306,29 @@ def test_trailing_slash_invariance_licenses():
         assert resp2.status_code == 200, f"Expected 200 with slash, got {resp2.status_code}"
 
 
+def test_verify_stats_route_not_shadowed_by_id():
+    """Verify /api/v1/verify/stats and /api/v1/verify/stats/ return stats (200), not 404 (Verification not found)."""
+    mock_claims = {
+        "uid": "fb_stats_tester",
+        "email": "stats_tester@whicoustic.xyz",
+        "name": "Stats Tester",
+    }
+
+    with patch("app.api.v1.auth.verify_firebase_token", return_value=mock_claims):
+        resp1 = client.get("/api/v1/verify/stats", headers={"Authorization": "Bearer mock-fb-token"})
+        assert resp1.status_code == 200, f"Expected 200, got {resp1.status_code}: {resp1.text}"
+        data1 = resp1.json()
+        assert "total_verifications" in data1
+        assert "watermarks_found" in data1
+        assert "success_rate" in data1
+
+        resp2 = client.get("/api/v1/verify/stats/", headers={"Authorization": "Bearer mock-fb-token"})
+        assert resp2.status_code == 200, f"Expected 200, got {resp2.status_code}: {resp2.text}"
+        data2 = resp2.json()
+        assert "total_verifications" in data2
+
+
+
 # ---------------------------------------------------------------------------
 # Tests: Multipart Audio Upload with Firebase ID Token
 # ---------------------------------------------------------------------------

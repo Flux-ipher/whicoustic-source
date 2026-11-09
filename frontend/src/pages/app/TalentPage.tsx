@@ -8,15 +8,16 @@ import { PageTransition } from '../../components/ui/PageTransition';
 import { TalentVoiceIllustration, ConnectionLostIllustration } from '../../components/ui/Illustrations';
 import { useAuth } from '../../context/AuthContext';
 import { voiceService, VoiceResponse } from '../../services/voiceService';
-import { ShieldCheck, Play, Pause, Edit3, Plus, Loader2 } from 'lucide-react';
+import { useVoiceAudioPlayer } from '../../hooks/useVoiceAudioPlayer';
+import { ShieldCheck, Play, Pause, Edit3, Plus, Loader2, AlertCircle } from 'lucide-react';
 
 export const TalentPage: React.FC = () => {
   const { user } = useAuth();
   const [voices, setVoices] = useState<VoiceResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [playingId, setPlayingId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const { playingId, isLoadingAudio, audioError, togglePlayVoice } = useVoiceAudioPlayer();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -158,6 +159,14 @@ export const TalentPage: React.FC = () => {
           />
         )}
 
+        {/* Audio Playback Error Banner */}
+        {audioError && (
+          <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 text-red-800 text-xs font-berthold rounded-card">
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+            <span>{audioError}</span>
+          </div>
+        )}
+
         {/* Reels List or Empty State */}
         {!isLoading && !error && (
           <>
@@ -186,11 +195,18 @@ export const TalentPage: React.FC = () => {
                     >
                       <div className="flex items-center gap-4 w-full sm:w-1/3">
                         <button
-                          onClick={() => setPlayingId(isPlaying ? null : voice.id)}
+                          onClick={() => togglePlayVoice(voice.id)}
+                          disabled={voice.status.toLowerCase() !== 'ready' && !voice.file_size}
                           aria-label={isPlaying ? 'Pause sample' : 'Play sample'}
-                          className="w-10 h-10 rounded-full bg-primary-container text-[#0B1C30] flex items-center justify-center shadow-amber-glow hover:bg-primary-hover shrink-0"
+                          className="w-10 h-10 rounded-full bg-primary-container text-[#0B1C30] flex items-center justify-center shadow-amber-glow hover:bg-primary-hover shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
+                          {isPlaying && isLoadingAudio ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : isPlaying ? (
+                            <Pause className="w-4 h-4 fill-current" />
+                          ) : (
+                            <Play className="w-4 h-4 fill-current" />
+                          )}
                         </button>
                         <div className="min-w-0">
                           <p className="font-recoleta text-sm font-bold text-on-surface truncate">

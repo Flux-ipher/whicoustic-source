@@ -8,7 +8,8 @@ import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyVaultIllustration, MicBlockedIllustration, ConnectionLostIllustration } from '../../components/ui/Illustrations';
 import { PageTransition } from '../../components/ui/PageTransition';
 import { voiceService, VoiceResponse } from '../../services/voiceService';
-import { UploadCloud, Mic2, Zap, Trash2, Plus, Loader2 } from 'lucide-react';
+import { useVoiceAudioPlayer } from '../../hooks/useVoiceAudioPlayer';
+import { UploadCloud, Mic2, Zap, Trash2, Plus, Loader2, Play, Pause, AlertCircle } from 'lucide-react';
 
 export const StudioPage: React.FC = () => {
   const [modelName, setModelName] = useState('Elena Rostova — Narrative Edition');
@@ -21,6 +22,7 @@ export const StudioPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const { playingId, isLoadingAudio, audioError, togglePlayVoice } = useVoiceAudioPlayer();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -240,10 +242,14 @@ export const StudioPage: React.FC = () => {
 
             <div className="bg-surface-container p-4 rounded-card space-y-3">
               <div className="flex items-center justify-between text-xs font-berthold">
-                <span className="text-secondary">Synthesized Output Stream</span>
-                <span className="font-code text-primary-container">42ms Edge TPU</span>
+                <span className="text-secondary">
+                  {playingId ? 'Streaming Model Audio' : 'Synthesized Output Stream'}
+                </span>
+                <span className="font-code text-primary-container">
+                  {playingId ? 'Playing Preview' : '42ms Edge TPU'}
+                </span>
               </div>
-              <WaveformVisualizer height={54} barCount={28} isPlaying={true} />
+              <WaveformVisualizer height={54} barCount={28} isPlaying={Boolean(playingId) || isProcessing} />
             </div>
 
             <div className="space-y-2 text-xs font-berthold">
@@ -389,13 +395,29 @@ export const StudioPage: React.FC = () => {
                           </span>
                         </td>
                         <td className="py-3.5 px-4 text-right">
-                          <button
-                            onClick={() => handleDeleteVoice(voice.id)}
-                            className="text-secondary hover:text-error transition-colors p-1"
-                            title="Delete model checkpoint"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => togglePlayVoice(voice.id)}
+                              disabled={voice.status.toLowerCase() !== 'ready' && !voice.file_size}
+                              className="w-7 h-7 rounded-full bg-primary-container text-[#0B1C30] flex items-center justify-center hover:bg-primary-hover transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                              title={playingId === voice.id ? 'Pause checkpoint preview' : 'Play checkpoint preview'}
+                            >
+                              {playingId === voice.id && isLoadingAudio ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : playingId === voice.id ? (
+                                <Pause className="w-3.5 h-3.5 fill-current" />
+                              ) : (
+                                <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteVoice(voice.id)}
+                              className="text-secondary hover:text-error transition-colors p-1"
+                              title="Delete model checkpoint"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </motion.tr>
                     ))}

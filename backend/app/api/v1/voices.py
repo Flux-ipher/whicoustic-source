@@ -9,8 +9,11 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 import os
 import tempfile
+import logging
 from datetime import datetime
 import uuid
+
+logger = logging.getLogger(__name__)
 
 from ...core.database import get_db
 from ...core.config import settings
@@ -94,6 +97,20 @@ async def upload_voice(
         # Generate unique voice ID
         voice_id = f"voice_{uuid.uuid4().hex[:12]}"
         
+        # Pre-upload raw audio file to persistent Google Drive / local storage adapter
+        storage = get_google_drive_storage()
+        raw_storage_id = None
+        try:
+            raw_upload = await storage.upload_file(
+                file_path=temp_file_path,
+                file_name=f"raw_{voice_id}_{file.filename or 'sample.wav'}",
+                mime_type=file.content_type or "audio/wav"
+            )
+            if raw_upload.get("success"):
+                raw_storage_id = raw_upload.get("file_id")
+        except Exception as store_err:
+            logger.warning(f"Initial raw audio storage upload deferred to background: {store_err}")
+
         # Create voice record in database as pending/processing
         voice = Voice(
             id=voice_id,
@@ -101,7 +118,7 @@ async def upload_voice(
             name=name or f"Voice {datetime.now().strftime('%Y%m%d_%H%M%S')}",
             description=description,
             original_filename=file.filename,
-            file_path=None,
+            file_path=raw_storage_id,
             speaker_embedding=None,
             duration=duration,
             sample_rate=audio_info.get('sample_rate') or 16000,
@@ -259,80 +276,6 @@ async def delete_voice(
     
     return {"message": "Voice deleted successfully"}
 
-@router.get("/{voice_id}/preview")
-@router.get("/{voice_id}/preview/")
-async def get_voice_preview(
-    voice_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get a preview of the voice sample."""
-    voice = db.query(Voice).filter(
-        Voice.id == voice_id,
-        Voice.user_id == current_user.id
-    ).first()
-    
-    if not voice:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Voice not found"
-        )
-    
-    if not voice.file_path or not os.path.exists(voice.file_path):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Audio file not found"
-        )
-    
-    return FileResponse(
-        voice.file_path,
-        media_type="audio/wav",
-        filename=f"{voice.name}_preview.wav"
-    )
-
-@router.post("/{voice_id}/clone-test")
-@router.post("/{voice_id}/clone-test/")
-async def test_voice_clone(
-    voice_id: str,
-    text: str = "Hello, this is a test of your cloned voice.",
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Test voice cloning with a short phrase."""
-    voice = db.query(Voice).filter(
-        Voice.id == voice_id,
-        Voice.user_id == current_user.id
-    ).first()
-    
-    if not voice:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Voice not found"
-        )
-    
-    if voice.status != 'ready':
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Voice is not ready for cloning"
-        )
-    
-    # Initialize voice processor
-    voice_processor = VoiceProcessor()
-    
-    # Generate test audio
-    test_audio_path = await voice_processor.synthesize_speech(
-        text=text,
-        voice_id=voice_id,
-        speaker_embedding=voice.speaker_embedding
-    )
-    
-    return FileResponse(
-        test_audio_path,
-        media_type="audio/wav",
-        filename=f"{voice.name}_test.wav"
-    )
-
-
 @router.get("/{voice_id}/stream", dependencies=[Depends(rate_limit_streaming)])
 @router.get("/{voice_id}/stream/", dependencies=[Depends(rate_limit_streaming)])
 async def stream_voice_audio(
@@ -353,10 +296,21 @@ async def stream_voice_audio(
         )
 
     if not voice.file_path:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Audio file not configured for this voice"
-        )
+        # Check standard processing directories for fallback repair
+        for p in [
+            Path("data/processed_voices") / f"{voice.id}_processed.wav",
+            Path("uploads") / f"{voice.id}_processed.wav",
+            Path("data/synthesized") / f"synthesis_{voice.id}.wav"
+        ]:
+            if p.exists():
+                voice.file_path = str(p)
+                db.commit()
+                break
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Audio file not configured for this voice"
+            )
 
     storage = get_google_drive_storage()
     meta = await storage.get_file_metadata(voice.file_path)
@@ -482,4 +436,72 @@ async def stream_voice_audio(
         status_code=status_code,
         media_type=mime_type,
         headers=headers,
+    )
+
+
+@router.get("/{voice_id}/preview", dependencies=[Depends(rate_limit_streaming)])
+@router.get("/{voice_id}/preview/", dependencies=[Depends(rate_limit_streaming)])
+async def get_voice_preview(
+    voice_id: str,
+    request: Request,
+    range_header: Optional[str] = Header(None, alias="Range"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get a preview of the voice sample via Google Drive adapter or local storage streaming.
+    Supports HTTP 206 Partial Content range requests and standard audio players.
+    """
+    return await stream_voice_audio(
+        voice_id=voice_id,
+        request=request,
+        range_header=range_header,
+        db=db
+    )
+
+
+@router.post("/{voice_id}/clone-test")
+@router.post("/{voice_id}/clone-test/")
+async def test_voice_clone(
+    voice_id: str,
+    text: str = "Hello, this is a test of your cloned voice.",
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Test voice cloning with a short phrase."""
+    voice = db.query(Voice).filter(
+        Voice.id == voice_id,
+        Voice.user_id == current_user.id
+    ).first()
+    
+    if not voice:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Voice not found"
+        )
+    
+    # Initialize voice processor
+    voice_processor = VoiceProcessor()
+    
+    # Generate test audio
+    test_audio_path = await voice_processor.synthesize_speech(
+        text=text,
+        voice_id=voice_id,
+        speaker_embedding=voice.speaker_embedding
+    )
+    
+    # Upload synthesized test audio to storage adapter if configured
+    try:
+        storage = get_google_drive_storage()
+        await storage.upload_file(
+            file_path=test_audio_path,
+            file_name=f"test_{voice.name or voice_id}.wav",
+            mime_type="audio/wav"
+        )
+    except Exception as drive_err:
+        logger.warning(f"Could not upload test audio to Google Drive storage: {drive_err}")
+    
+    return FileResponse(
+        test_audio_path,
+        media_type="audio/wav",
+        filename=f"{voice.name}_test.wav"
     )

@@ -1,11 +1,26 @@
 import asyncio
-import edge_tts
-from gtts import gTTS
-import pyttsx3
 import io
+import pytest
+
+try:
+    import edge_tts
+except ImportError:
+    edge_tts = None
+
+try:
+    from gtts import gTTS
+except ImportError:
+    gTTS = None
+
+try:
+    import pyttsx3
+except ImportError:
+    pyttsx3 = None
 
 async def test_edge_tts():
     """Test Edge TTS functionality"""
+    if edge_tts is None:
+        pytest.skip("edge_tts not installed in environment")
     print("🎯 Testing Edge TTS...")
     try:
         voices = await edge_tts.list_voices()
@@ -32,6 +47,8 @@ async def test_edge_tts():
 
 def test_gtts():
     """Test Google TTS"""
+    if gTTS is None:
+        pytest.skip("gTTS not installed in environment")
     print("\n🎯 Testing Google TTS...")
     try:
         text = "Hello, this is a test of Google Text-to-Speech."
@@ -47,6 +64,8 @@ def test_gtts():
 
 def test_local_tts():
     """Test local Windows TTS"""
+    if pyttsx3 is None:
+        pytest.skip("pyttsx3 not installed in environment")
     print("\n🎯 Testing Local Windows TTS...")
     try:
         engine = pyttsx3.init()

@@ -268,32 +268,51 @@ class GoogleDriveStorageService:
         return {"success": False, "error": f"File '{file_id}' not found"}
 
     def _resolve_local_file_path(self, file_id: str) -> Optional[Path]:
-        """Locate a local file from an ID, absolute path, or upload directory file."""
-        # Direct path check
+        """Locate a local file from an ID, absolute path, or standard audio directories."""
+        if not file_id:
+            return None
+
+        # 1. Direct path check
         direct = Path(file_id)
         if direct.exists() and direct.is_file():
             return direct
 
-        # Check in upload path
-        candidate = self.upload_path / file_id
-        if candidate.exists() and candidate.is_file():
-            return candidate
+        # Potential search roots
+        search_roots = [
+            self.upload_path,
+            Path("data/processed_voices"),
+            Path("data/synthesized"),
+            Path("data/tts_outputs"),
+            Path("data"),
+            Path("/tmp"),
+        ]
 
-        # Check if stripped of local_ prefix
-        if file_id.startswith("local_"):
-            sub = file_id[len("local_"):]
-            cand2 = self.upload_path / sub
+        # 2. Check candidate directly in search roots
+        for root in search_roots:
+            candidate = root / file_id
+            if candidate.exists() and candidate.is_file():
+                return candidate
+            candidate_base = root / Path(file_id).name
+            if candidate_base.exists() and candidate_base.is_file():
+                return candidate_base
+
+        # 3. Check stripped of local_ prefix
+        sub = file_id[len("local_"):] if file_id.startswith("local_") else file_id
+        for root in search_roots:
+            cand2 = root / sub
             if cand2.exists() and cand2.is_file():
                 return cand2
-            # Try fuzzy search in upload_path
-            for f in self.upload_path.iterdir():
-                if f.is_file() and (sub in f.name or f.name.endswith(sub)):
-                    return f
+            # Fuzzy match by suffix / base name
+            if root.exists():
+                for f in root.iterdir():
+                    if f.is_file() and (sub in f.name or f.name.endswith(sub)):
+                        return f
 
-        # Search recursively in upload_path
-        for f in self.upload_path.rglob("*"):
-            if f.is_file() and f.name == file_id:
-                return f
+        # 4. Search recursively across upload path
+        if self.upload_path.exists():
+            for f in self.upload_path.rglob("*"):
+                if f.is_file() and f.name == Path(file_id).name:
+                    return f
 
         return None
 

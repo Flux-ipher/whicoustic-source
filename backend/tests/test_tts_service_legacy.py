@@ -8,7 +8,7 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from tts_inference_engine import TTSInferenceEngine, SynthesisRequest
+from app.services.tts_inference_engine import TTSInferenceEngine, SynthesisRequest
 
 async def test_tts_engine():
     print("Testing TTS Inference Engine")

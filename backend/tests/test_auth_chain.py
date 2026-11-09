@@ -33,6 +33,8 @@ import sys
 import uuid
 import wave
 import struct
+from pathlib import Path
+import numpy as np
 from datetime import datetime, timedelta
 from unittest.mock import patch, AsyncMock
 
@@ -905,6 +907,120 @@ def test_google_auth_request_reset_on_failure():
     firebase_auth._get_google_auth_request()
     firebase_auth._reset_google_auth_request()
     assert firebase_auth._google_auth_request is None
+
+
+def test_voice_audio_synthesis_sound_quality_and_amplitude():
+    """Verify VoiceProcessor.synthesize_speech produces audible, non-silent audio with no NaNs."""
+    import asyncio
+    import soundfile as sf
+    from app.services.voice_processor import VoiceProcessor
+    
+    vp = VoiceProcessor()
+    
+    # Test 1: synthesize with None embedding
+    out_path1 = asyncio.run(vp.synthesize_speech(
+        text="Testing audio output without embedding",
+        voice_id="test_voice_none_emb",
+        speaker_embedding=None
+    ))
+    assert os.path.exists(out_path1), f"Audio file not generated: {out_path1}"
+    data1, sr1 = sf.read(out_path1)
+    assert len(data1) > 0, "Audio file is empty"
+    assert not np.isnan(data1).any(), "Audio data contains NaNs"
+    peak1 = float(np.max(np.abs(data1)))
+    assert peak1 > 0.5, f"Expected audible peak > 0.5, got {peak1}"
+    assert peak1 <= 1.0, f"Peak exceeded clipping threshold: {peak1}"
+
+    # Test 2: synthesize with real vector embedding
+    dummy_embedding = [0.15, -0.22, 0.44, 0.08, -0.05]
+    out_path2 = asyncio.run(vp.synthesize_speech(
+        text="Testing audio output with valid speaker embedding",
+        voice_id="test_voice_with_emb",
+        speaker_embedding=dummy_embedding
+    ))
+    assert os.path.exists(out_path2), f"Audio file not generated: {out_path2}"
+    data2, sr2 = sf.read(out_path2)
+    assert len(data2) > 0, "Audio file is empty"
+    assert not np.isnan(data2).any(), "Audio data contains NaNs"
+    peak2 = float(np.max(np.abs(data2)))
+    assert peak2 > 0.5, f"Expected audible peak > 0.5, got {peak2}"
+
+
+def test_voice_preview_and_stream_routes_playback():
+    """Verify /api/v1/voices/{voice_id}/preview and /stream both return audio without 401."""
+    wav_bytes = _generate_wav_bytes(duration_sec=3.0)
+    
+    # Write a test audio file into data/processed_voices
+    processed_dir = Path("data/processed_voices")
+    processed_dir.mkdir(parents=True, exist_ok=True)
+    test_wav = processed_dir / "voice_preview_test_processed.wav"
+    with open(test_wav, "wb") as f:
+        f.write(wav_bytes)
+
+    # Insert a dummy voice record into in-memory test DB session
+    from app.models.voice import Voice
+    db = TestingSessionLocal()
+    try:
+        existing = db.query(Voice).filter(Voice.id == "voice_preview_test").first()
+        if not existing:
+            v = Voice(
+                id="voice_preview_test",
+                user_id="fb_slash_tester",
+                name="Preview Test Voice",
+                file_path=str(test_wav),
+                status="ready",
+                duration=3.0,
+                sample_rate=16000,
+                file_size=len(wav_bytes)
+            )
+            db.add(v)
+            db.commit()
+    finally:
+        db.close()
+
+    # Stream route (no Authorization header required)
+    resp_stream = client.get("/api/v1/voices/voice_preview_test/stream")
+    assert resp_stream.status_code in (200, 206), f"Stream failed: {resp_stream.status_code}"
+    assert len(resp_stream.content) > 0
+    assert resp_stream.headers.get("content-type") == "audio/wav"
+
+    # Preview route (supports unauthenticated player stream with rate limit)
+    resp_prev = client.get("/api/v1/voices/voice_preview_test/preview")
+    assert resp_prev.status_code in (200, 206), f"Preview failed: {resp_prev.status_code}"
+    assert len(resp_prev.content) > 0
+    assert resp_prev.headers.get("content-type") == "audio/wav"
+
+
+def test_tts_download_dual_routes_and_job_sync():
+    """Verify /api/v1/tts/download/{job_id} and /job/{job_id}/download dual routes."""
+    from app.services.tts_service import tts_service
+    
+    # Create test synthesized file
+    out_dir = Path("data/tts_outputs")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    test_file = out_dir / "test_synth_file.wav"
+    wav_bytes = _generate_wav_bytes(duration_sec=2.0)
+    with open(test_file, "wb") as f:
+        f.write(wav_bytes)
+
+    job_id = "tts_dual_test_123"
+    tts_service._jobs[job_id] = {
+        "job_id": job_id,
+        "user_id": "test_user_tts",
+        "output_file": str(test_file),
+        "status": "completed",
+    }
+
+    # Route 1: /api/v1/tts/download/{job_id}
+    resp1 = client.get(f"/api/v1/tts/download/{job_id}")
+    assert resp1.status_code == 200, f"Expected 200, got {resp1.status_code}"
+    assert resp1.headers.get("content-type") == "audio/wav"
+    assert len(resp1.content) == len(wav_bytes)
+
+    # Route 2: /api/v1/tts/job/{job_id}/download
+    resp2 = client.get(f"/api/v1/tts/job/{job_id}/download")
+    assert resp2.status_code == 200, f"Expected 200, got {resp2.status_code}"
+    assert len(resp2.content) == len(wav_bytes)
 
 
 # ---------------------------------------------------------------------------

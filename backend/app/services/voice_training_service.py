@@ -90,9 +90,26 @@ class VoiceTrainingService:
                     processed_audio_path
                 )
                 
+                # Upload processed voice to Google Drive / persistent storage adapter
+                from app.services.google_drive_storage import get_google_drive_storage
+                storage = get_google_drive_storage()
+                drive_res = await storage.upload_file(
+                    file_path=processed_audio_path,
+                    file_name=f"{voice.name or 'voice'}_{voice_id}.wav",
+                    mime_type="audio/wav"
+                )
+                
+                final_file_path = processed_audio_path
+                if drive_res.get("success"):
+                    final_file_path = drive_res.get("file_id") or processed_audio_path
+                    logger.info(
+                        f"Stored voice {voice_id} via storage adapter: "
+                        f"type={drive_res.get('storage_type')}, id={final_file_path}"
+                    )
+                
                 # Finalize
                 voice.status = "ready"
-                voice.file_path = processed_audio_path
+                voice.file_path = final_file_path
                 voice.speaker_embedding = speaker_embedding.tolist()
                 voice.updated_at = datetime.utcnow()
                 db.commit()

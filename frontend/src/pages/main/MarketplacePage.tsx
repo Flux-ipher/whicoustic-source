@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { licenseService, MarketplaceLicenseItem } from '../../services/licenseService';
+import { voiceService } from '../../services/voiceService';
+import { useVoiceAudioPlayer } from '../../hooks/useVoiceAudioPlayer';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { WaveformVisualizer } from '../../components/ui/WaveformVisualizer';
@@ -8,7 +10,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptySearchIllustration, EmptyVaultIllustration, ConnectionLostIllustration } from '../../components/ui/Illustrations';
 import { PageTransition } from '../../components/ui/PageTransition';
-import { Search, Play, Pause, ShieldCheck, SlidersHorizontal, RotateCcw, Loader2 } from 'lucide-react';
+import { Search, Play, Pause, ShieldCheck, SlidersHorizontal, RotateCcw, Loader2, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const MarketplacePage: React.FC = () => {
@@ -17,7 +19,7 @@ export const MarketplacePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [playingId, setPlayingId] = useState<string | null>(null);
+  const { playingId, isLoadingAudio, audioError, togglePlayVoice } = useVoiceAudioPlayer();
 
   const categories = ['All', 'commercial', 'personal', 'enterprise', 'educational', 'non_profit', 'custom'];
 
@@ -57,8 +59,9 @@ export const MarketplacePage: React.FC = () => {
     return matchesSearch && matchesCategory;
   });
 
-  const togglePlay = (id: string) => {
-    setPlayingId((prev) => (prev === id ? null : id));
+  const togglePlay = (item: MarketplaceLicenseItem) => {
+    const targetUrl = item.voice_preview_url || voiceService.getStreamUrl(item.voice_id || item.id);
+    togglePlayVoice(item.id, targetUrl);
   };
 
   return (
@@ -107,6 +110,14 @@ export const MarketplacePage: React.FC = () => {
           </button>
         ))}
       </div>
+
+      {/* Audio Playback Error Alert */}
+      {audioError && (
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 text-red-800 text-xs font-berthold rounded-card">
+          <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+          <span>{audioError}</span>
+        </div>
+      )}
 
       {/* Loading Skeleton */}
       {isLoading && (
@@ -243,10 +254,12 @@ export const MarketplacePage: React.FC = () => {
                       <div className="bg-surface-container/70 p-3.5 rounded-card border border-outline-subtle space-y-2">
                         <div className="flex items-center justify-between text-xs font-berthold">
                           <button
-                            onClick={() => togglePlay(voice.id)}
+                            onClick={() => togglePlay(voice)}
                             className="flex items-center gap-2 font-semibold text-primary-container hover:text-primary-hover transition-colors"
                           >
-                            {isPlaying ? (
+                            {isPlaying && isLoadingAudio ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : isPlaying ? (
                               <Pause className="w-4 h-4 fill-current" />
                             ) : (
                               <Play className="w-4 h-4 fill-current" />

@@ -54,18 +54,26 @@ def run_test_module(module_name: str) -> tuple[int, int, list[str]]:
     print(f"\n--- Running module: {module_name} ---")
 
     # Run standalone test functions
+    import asyncio
     for name, fn in test_functions:
         t0 = time.perf_counter()
         try:
-            fn()
+            if inspect.iscoroutinefunction(fn):
+                asyncio.run(fn())
+            else:
+                fn()
             dt = (time.perf_counter() - t0) * 1000
             print(f"  [PASS] {name} ({dt:.1f}ms)")
             passed += 1
-        except Exception as exc:
+        except BaseException as exc:
             dt = (time.perf_counter() - t0) * 1000
-            print(f"  [FAIL] {name} ({dt:.1f}ms): {exc}")
-            failed += 1
-            failures.append(f"{module_name}.{name}: {exc}\n{traceback.format_exc()}")
+            exc_type = type(exc).__name__
+            if exc_type in ("Skipped", "SkipTest"):
+                print(f"  [SKIP] {name} ({dt:.1f}ms): {exc}")
+            else:
+                print(f"  [FAIL] {name} ({dt:.1f}ms): {exc}")
+                failed += 1
+                failures.append(f"{module_name}.{name}: {exc}\n{traceback.format_exc()}")
 
     # Run TestCase classes if any
     for test_class in test_case_classes:

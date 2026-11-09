@@ -357,9 +357,36 @@ class TTSInferenceEngine:
     async def _generate_sine_wave(self, request: SynthesisRequest) -> bytes:
         import soundfile as sf
         sample_rate = request.sample_rate
-        duration = max(1.0, min(10.0, len(request.text) * 0.1))
+        speed = max(0.5, min(2.0, getattr(request, 'speed', 1.0)))
+        pitch = getattr(request, 'pitch_shift', 0.0)
+        duration = max(1.5, min(25.0, len(request.text) * 0.08 * (1.0 / speed)))
         t = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
-        audio = 0.5 * np.sin(2 * np.pi * 440 * t)
+        
+        # Determine voice fundamental frequency based on voice_id hash
+        f0 = float(160.0 + (abs(hash(request.voice_id)) % 80) + pitch * 20.0)
+        f0 = max(90.0, min(360.0, f0))
+        f1 = f0 * 2.1
+        f2 = f0 * 3.3
+        
+        vibrato = 1.0 + 0.018 * np.sin(2 * np.pi * 5.2 * t)
+        cadence = 0.5 + 0.5 * np.sin(2 * np.pi * 4.0 * t)
+        fade_in = np.minimum(1.0, t / 0.05)
+        fade_out = np.minimum(1.0, (duration - t) / 0.08)
+        envelope = cadence * fade_in * fade_out
+        
+        audio = (
+            0.50 * np.sin(2 * np.pi * f0 * vibrato * t) +
+            0.28 * np.sin(2 * np.pi * f1 * t) +
+            0.14 * np.sin(2 * np.pi * f2 * t)
+        ) * envelope
+        
+        audio = np.nan_to_num(audio, nan=0.0)
+        peak = float(np.max(np.abs(audio))) if len(audio) > 0 else 0.0
+        if peak > 1e-4:
+            audio = (audio / peak) * 0.82
+        else:
+            audio = 0.5 * np.sin(2 * np.pi * 220.0 * t)
+            
         buf = io.BytesIO()
         sf.write(buf, audio, samplerate=sample_rate, format="WAV")
         return buf.getvalue()
@@ -438,26 +465,25 @@ class TTSInferenceEngine:
             return bytes(audio_bytes)
     
     async def _postprocess_audio(self, audio_data: bytes, request: SynthesisRequest) -> bytes:
-        """Apply post-processing effects"""
-        
-        # Apply speed adjustment (simulated)
+        """Apply post-processing effects while strictly preserving WAV container structure."""
+        if not audio_data:
+            return audio_data
+
+        # If audio_data has WAV RIFF header, only modify PCM array via soundfile if speed != 1.0
         if request.speed != 1.0:
-            # In real implementation, this would resample the audio
-            speed_factor = 1.0 / request.speed
-            new_length = int(len(audio_data) * speed_factor)
-            # Simple length adjustment (real implementation would do proper resampling)
-            if new_length < len(audio_data):
-                audio_data = audio_data[:new_length]
-            elif new_length > len(audio_data):
-                # Repeat data to extend length (crude but functional)
-                repeat_factor = new_length // len(audio_data) + 1
-                extended_data = audio_data * repeat_factor
-                audio_data = extended_data[:new_length]
-        
-        # Apply pitch shift (simulated)
-        if request.pitch_shift != 0.0:
-            # In real implementation, this would modify the frequency content
-            pass
+            try:
+                import soundfile as sf
+                in_buf = io.BytesIO(audio_data)
+                audio_arr, sr = sf.read(in_buf)
+                if len(audio_arr) > 0:
+                    import librosa
+                    # Time stretch without altering pitch
+                    stretched = librosa.effects.time_stretch(audio_arr.astype(np.float32), rate=float(request.speed))
+                    out_buf = io.BytesIO()
+                    sf.write(out_buf, stretched, samplerate=sr, format="WAV")
+                    return out_buf.getvalue()
+            except Exception as e:
+                self.logger.warning(f"Audio time-stretching failed ({e}), returning unaltered audio.")
         
         return audio_data
     
